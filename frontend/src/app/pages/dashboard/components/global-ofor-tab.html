@@ -1,0 +1,274 @@
+<div class="space-y-3">
+  <!-- Filtres dédiés -->
+  <div class="rounded-xl border bg-card text-card-foreground shadow-sm py-2">
+    <div class="flex flex-wrap items-center gap-2 px-3">
+      <div class="flex items-center gap-1.5">
+        <lucide-icon [img]="icons.Filter" class="w-3.5 h-3.5 text-muted-foreground"></lucide-icon>
+        <span class="text-xs text-muted-foreground">Comparer:</span>
+      </div>
+
+      <app-select [value]="dimension()" (valueChange)="setDimension($event)">
+        <app-select-trigger class="w-40 h-7 text-xs"><app-select-value></app-select-value></app-select-trigger>
+        <app-select-content>
+          <app-select-item value="region">Par région</app-select-item>
+          <app-select-item value="bailleur">Par bailleur</app-select-item>
+          <app-select-item value="nature">Par nature d'activité</app-select-item>
+        </app-select-content>
+      </app-select>
+
+      <span class="text-xs text-muted-foreground ml-2">Période:</span>
+      <app-select [value]="yearFrom()" (valueChange)="yearFrom.set($event)">
+        <app-select-trigger class="w-20 h-7 text-xs"><app-select-value></app-select-value></app-select-trigger>
+        <app-select-content>
+          <app-select-item *ngFor="let y of yearOptions" [value]="y">{{ y }}</app-select-item>
+        </app-select-content>
+      </app-select>
+      <span class="text-xs">→</span>
+      <app-select [value]="yearTo()" (valueChange)="yearTo.set($event)">
+        <app-select-trigger class="w-20 h-7 text-xs"><app-select-value></app-select-value></app-select-trigger>
+        <app-select-content>
+          <app-select-item *ngFor="let y of yearOptions" [value]="y">{{ y }}</app-select-item>
+        </app-select-content>
+      </app-select>
+
+      <div class="h-5 w-px bg-border mx-1"></div>
+
+      <app-select [value]="regionFilter()" (valueChange)="regionFilter.set($event)">
+        <app-select-trigger class="w-32 h-7 text-xs"><app-select-value placeholder="Région"></app-select-value></app-select-trigger>
+        <app-select-content>
+          <app-select-item value="all">Toutes régions</app-select-item>
+          <app-select-item *ngFor="let r of regions" [value]="r">{{ r }}</app-select-item>
+        </app-select-content>
+      </app-select>
+
+      <app-select [value]="bailleurFilter()" (valueChange)="bailleurFilter.set($event)">
+        <app-select-trigger class="w-36 h-7 text-xs"><app-select-value placeholder="Bailleur"></app-select-value></app-select-trigger>
+        <app-select-content>
+          <app-select-item value="all">Tous bailleurs</app-select-item>
+          <app-select-item *ngFor="let b of bailleurs" [value]="b">{{ b }}</app-select-item>
+        </app-select-content>
+      </app-select>
+
+      <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ml-auto">
+        {{ data().filteredCount }} projets
+      </span>
+    </div>
+  </div>
+
+  <!-- KPIs globaux -->
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="p-3 flex items-center gap-2">
+        <div class="p-2 rounded-lg bg-primary/10"><lucide-icon [img]="icons.FolderKanban" class="w-4 h-4 text-primary"></lucide-icon></div>
+        <div><p class="text-xs text-muted-foreground">Projets actifs</p><p class="text-lg font-bold">{{ data().filteredCount }}</p></div>
+      </div>
+    </div>
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="p-3 flex items-center gap-2">
+        <div class="p-2 rounded-lg bg-blue-100"><lucide-icon [img]="icons.Wallet" class="w-4 h-4 text-blue-600"></lucide-icon></div>
+        <div><p class="text-xs text-muted-foreground">Budget planifié</p><p class="text-sm font-bold">{{ formatShort(data().totals.budgetPlanned) }}</p></div>
+      </div>
+    </div>
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="p-3 flex items-center gap-2">
+        <div class="p-2 rounded-lg bg-green-100"><lucide-icon [img]="icons.TrendingUp" class="w-4 h-4 text-green-600"></lucide-icon></div>
+        <div><p class="text-xs text-muted-foreground">Budget exécuté</p><p class="text-sm font-bold text-green-700">{{ formatShort(data().totals.budgetExecuted) }}</p></div>
+      </div>
+    </div>
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="p-3 flex items-center gap-2">
+        <div class="p-2 rounded-lg bg-amber-100"><lucide-icon [img]="icons.BarChart3" class="w-4 h-4 text-amber-600"></lucide-icon></div>
+        <div><p class="text-xs text-muted-foreground">Taux exécution</p><p class="text-lg font-bold text-amber-700">{{ tauxBudgetGlobal() }}%</p></div>
+      </div>
+    </div>
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="p-3 flex items-center gap-2">
+        <div class="p-2 rounded-lg bg-purple-100"><lucide-icon [img]="icons.Package" class="w-4 h-4 text-purple-600"></lucide-icon></div>
+        <div><p class="text-xs text-muted-foreground">Livrables (types)</p><p class="text-xs font-bold leading-tight">{{ data().units.length }} types</p></div>
+      </div>
+    </div>
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="p-3 flex items-center gap-2">
+        <div class="p-2 rounded-lg bg-emerald-100"><lucide-icon [img]="icons.Award" class="w-4 h-4 text-emerald-600"></lucide-icon></div>
+        <div><p class="text-xs text-muted-foreground">Taux livraison moy.</p><p class="text-lg font-bold text-emerald-700">{{ tauxLivrablesGlobal() }}%</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graphiques -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="py-3 px-4"><h3 class="text-sm font-semibold">Budget annuel: planifié vs exécuté</h3></div>
+      <div class="px-4 pb-4 h-[260px]"><canvas #budgetChart></canvas></div>
+    </div>
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="py-3 px-4 flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Livrables annuels — {{ deliverableFilter() === 'all' ? 'tous types' : deliverableFilter() }}</h3>
+        <app-select [value]="deliverableFilter()" (valueChange)="deliverableFilter.set($event)">
+          <app-select-trigger class="w-44 h-7 text-xs"><app-select-value placeholder="Livrable"></app-select-value></app-select-trigger>
+          <app-select-content>
+            <app-select-item value="all">Tous (indicatif)</app-select-item>
+            <app-select-item *ngFor="let u of data().units" [value]="u">{{ u }}</app-select-item>
+          </app-select-content>
+        </app-select>
+      </div>
+      <div class="px-4 pb-4 h-[260px]"><canvas #livrablesChart></canvas></div>
+    </div>
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="py-3 px-4"><h3 class="text-sm font-semibold">Comparaison — Budget exécuté {{ dimLabel() === 'Régions' ? 'par région' : dimLabel() === 'Bailleurs' ? 'par bailleur' : "par nature d'activité" }}</h3></div>
+      <div class="px-4 pb-4 h-[260px]"><canvas #dimChart></canvas></div>
+    </div>
+    <div class="rounded-xl border bg-card shadow-sm">
+      <div class="py-3 px-4"><h3 class="text-sm font-semibold">Répartition des projets par statut</h3></div>
+      <div class="px-4 pb-4 h-[260px]"><canvas #statusChart></canvas></div>
+    </div>
+  </div>
+
+  <!-- Tableau performance annuelle -->
+  <div class="rounded-xl border bg-card shadow-sm">
+    <div class="py-3 px-4"><h3 class="text-sm font-semibold">Performance globale annuelle <span class="text-xs text-muted-foreground font-normal">(cliquer pour voir le détail)</span></h3></div>
+    <div class="px-4 pb-4 overflow-x-auto">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="border-b">
+            <th class="text-xs font-medium text-muted-foreground py-2 pr-2">Année</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-center">Projets</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-right">Budget planifié</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-right">Budget exécuté</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-center w-32">Taux exéc.</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-center">Types livrables</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-center">Activités</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 w-12"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let y of data().yearly" class="border-b hover:bg-muted/50 cursor-pointer transition-colors" (click)="openDetail('year', y.year)">
+            <td class="text-xs font-medium py-2 pr-2">{{ y.year }}</td>
+            <td class="text-xs text-center py-2">{{ y.projectsActive }}</td>
+            <td class="text-xs text-right py-2">{{ formatMontant(y.budgetPlanned) }}</td>
+            <td class="text-xs text-right font-medium py-2">{{ formatMontant(y.budgetExecuted) }}</td>
+            <td class="py-2">
+              <div class="flex items-center gap-2">
+                <div class="flex-1 h-2 bg-muted rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full" [style.width.%]="Math.min(y.tauxBudget, 100)"></div></div>
+                <span class="text-xs w-10 text-right">{{ y.tauxBudget }}%</span>
+              </div>
+            </td>
+            <td class="text-xs text-center py-2">{{ Object.keys(y.byUnit).length }}</td>
+            <td class="text-xs text-center py-2">{{ y.activitiesDone }}/{{ y.activitiesCount }}</td>
+            <td class="text-right py-2">
+              <button class="p-1 rounded hover:bg-muted" (click)="$event.stopPropagation(); openDetail('year', y.year)">
+                <lucide-icon [img]="icons.Eye" class="h-3.5 w-3.5"></lucide-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tableau comparatif par dimension -->
+  <div class="rounded-xl border bg-card shadow-sm">
+    <div class="py-3 px-4">
+      <h3 class="text-sm font-semibold">
+        Comparatif détaillé — {{ dimLabel() }}
+        <span class="text-xs text-muted-foreground font-normal ml-2">(cliquer pour voir le détail)</span>
+      </h3>
+    </div>
+    <div class="px-4 pb-4 overflow-x-auto">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="border-b">
+            <th class="text-xs font-medium text-muted-foreground py-2 pr-2">{{ dimColLabel() }}</th>
+            <th *ngIf="dimension() !== 'nature'" class="text-xs font-medium text-muted-foreground py-2 text-center">Projets</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-right">Budget planifié</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-right">Budget exécuté</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-center w-32">Taux exéc.</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 text-center">Types livrables</th>
+            <th class="text-xs font-medium text-muted-foreground py-2 w-12"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let d of data().byDimension" class="border-b hover:bg-muted/50 cursor-pointer transition-colors" (click)="openDetail('dim', d.name)">
+            <td class="text-xs font-medium py-2 pr-2">{{ d.name }}</td>
+            <td *ngIf="dimension() !== 'nature'" class="text-xs text-center py-2">{{ d.projets }}</td>
+            <td class="text-xs text-right py-2">{{ formatMontant(d.budgetPlanned) }}</td>
+            <td class="text-xs text-right font-medium py-2">{{ formatMontant(d.budgetExecuted) }}</td>
+            <td class="py-2">
+              <div class="flex items-center gap-2">
+                <div class="flex-1 h-2 bg-muted rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full" [style.width.%]="Math.min(d.tauxExecution, 100)"></div></div>
+                <span class="text-xs w-10 text-right">{{ d.tauxExecution }}%</span>
+              </div>
+            </td>
+            <td class="text-xs text-center py-2">{{ Object.keys(d.byUnit).length }}</td>
+            <td class="text-right py-2">
+              <button class="p-1 rounded hover:bg-muted" (click)="$event.stopPropagation(); openDetail('dim', d.name)">
+                <lucide-icon [img]="icons.Eye" class="h-3.5 w-3.5"></lucide-icon>
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="data().byDimension.length === 0">
+            <td colspan="7" class="text-center text-xs text-muted-foreground py-4">Aucune donnée</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Detail Dialog -->
+  <div *ngIf="detail()" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div class="fixed inset-0 bg-black/50" (click)="closeDetail()"></div>
+    <div class="relative bg-background border rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto animate-fade-in z-10">
+      <div *ngIf="detailData() as dd" class="p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">{{ dd.title }}</h2>
+          <button (click)="closeDetail()" class="p-1.5 rounded-md hover:bg-muted"><lucide-icon [img]="icons.X" class="w-4 h-4"></lucide-icon></button>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div class="rounded-xl border bg-card shadow-sm p-3">
+            <p class="text-xs text-muted-foreground">Budget planifié</p>
+            <p class="text-sm font-bold">{{ formatMontant(dd.budgetPlanned) }} FCFA</p>
+          </div>
+          <div class="rounded-xl border bg-card shadow-sm p-3">
+            <p class="text-xs text-muted-foreground">Budget exécuté</p>
+            <p class="text-sm font-bold text-green-700">{{ formatMontant(dd.budgetExecuted) }} FCFA</p>
+          </div>
+          <div class="rounded-xl border bg-card shadow-sm p-3">
+            <p class="text-xs text-muted-foreground">Taux d'exécution</p>
+            <p class="text-sm font-bold text-amber-700">{{ dd.tauxBudget }}%</p>
+          </div>
+          <div class="rounded-xl border bg-card shadow-sm p-3">
+            <p class="text-xs text-muted-foreground">Projets / Activités</p>
+            <p class="text-sm font-bold">{{ dd.projets }} / {{ dd.activitiesCount }}</p>
+          </div>
+        </div>
+        <!-- Livrables table -->
+        <div *ngIf="getUnitKeys(dd.byUnit).length > 0">
+          <h3 class="text-sm font-semibold mb-2">Livrables — Détail par type</h3>
+          <table class="w-full text-left">
+            <thead>
+              <tr class="border-b">
+                <th class="text-xs font-medium text-muted-foreground py-2">Livrable</th>
+                <th class="text-xs font-medium text-muted-foreground py-2 text-right">Cible</th>
+                <th class="text-xs font-medium text-muted-foreground py-2 text-right">Réalisé</th>
+                <th class="text-xs font-medium text-muted-foreground py-2 text-center w-32">Taux</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let u of getUnitKeys(dd.byUnit)" class="border-b">
+                <td class="text-xs font-medium py-2">{{ u }}</td>
+                <td class="text-xs text-right py-2">{{ formatMontant(dd.byUnit[u].target) }}</td>
+                <td class="text-xs text-right font-medium py-2">{{ formatMontant(dd.byUnit[u].produced) }}</td>
+                <td class="py-2">
+                  <div class="flex items-center gap-2">
+                    <div class="flex-1 h-2 bg-muted rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full" [style.width.%]="Math.min(dd.byUnit[u].target > 0 ? Math.round((dd.byUnit[u].produced / dd.byUnit[u].target) * 100) : 0, 100)"></div></div>
+                    <span class="text-xs w-10 text-right">{{ dd.byUnit[u].target > 0 ? Math.round((dd.byUnit[u].produced / dd.byUnit[u].target) * 100) : 0 }}%</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

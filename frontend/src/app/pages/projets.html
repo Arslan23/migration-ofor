@@ -1,0 +1,220 @@
+<div class="space-y-3 sm:space-y-4 lg:space-y-6 animate-fade-in">
+  <div class="flex flex-col gap-3 sm:flex-row sm:gap-4 justify-between">
+    <div class="flex flex-col sm:flex-row flex-1 gap-2 sm:gap-3">
+      <div class="relative flex-1">
+        <lucide-icon [img]="SearchIcon" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"></lucide-icon>
+        <app-input placeholder="Rechercher un projet..." class="pl-10 h-9 text-sm w-full" [value]="searchQuery()" (input)="onSearchChange($event)"></app-input>
+      </div>
+      <div class="flex gap-2">
+        <app-select [value]="workflowFilter()" (valueChange)="workflowFilter.set($event)">
+          <app-select-trigger class="w-full sm:w-32 h-9 text-sm">
+            <app-select-value placeholder="Workflow"></app-select-value>
+          </app-select-trigger>
+          <app-select-content>
+            <app-select-item value="all">Tous</app-select-item>
+            <app-select-item value="brouillon">Brouillons</app-select-item>
+            <app-select-item value="en_validation">En validation</app-select-item>
+            <app-select-item value="valide">Validés</app-select-item>
+            <app-select-item value="rejete">Rejetés</app-select-item>
+          </app-select-content>
+        </app-select>
+        <app-select [value]="statusFilter()" (valueChange)="statusFilter.set($event)">
+          <app-select-trigger class="w-full sm:w-32 h-9 text-sm">
+            <app-select-value placeholder="Statut"></app-select-value>
+          </app-select-trigger>
+          <app-select-content>
+            <app-select-item value="all">Tous statuts</app-select-item>
+            <app-select-item value="en_cours">En cours</app-select-item>
+            <app-select-item value="termine">Terminé</app-select-item>
+            <app-select-item value="retard">En retard</app-select-item>
+            <app-select-item value="planifie">Planifié</app-select-item>
+            <app-select-item value="suspendu">Suspendu</app-select-item>
+          </app-select-content>
+        </app-select>
+      </div>
+    </div>
+    <div class="flex gap-2 sm:gap-3">
+      <app-button variant="outline" size="sm" class="h-9 px-2 sm:px-3" (click)="handleExportCSV()">
+        <lucide-icon [img]="FileSpreadsheetIcon" class="w-4 h-4 sm:mr-2"></lucide-icon>
+        <span class="hidden sm:inline">CSV</span>
+      </app-button>
+      <app-button variant="outline" size="sm" class="h-9 px-2 sm:px-3" (click)="handleExportPDF()">
+        <lucide-icon [img]="DownloadIcon" class="w-4 h-4 sm:mr-2"></lucide-icon>
+        <span class="hidden sm:inline">PDF</span>
+      </app-button>
+      <app-button (click)="showCreateForm.set(true)" size="sm" class="h-9">
+        <lucide-icon [img]="PlusIcon" class="w-4 h-4 sm:mr-2"></lucide-icon>
+        <span class="hidden sm:inline">Nouveau projet</span>
+      </app-button>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+    <app-card class="p-3 sm:p-4">
+      <p class="text-xs sm:text-sm text-muted-foreground">Total projets</p>
+      <p class="text-lg sm:text-xl lg:text-2xl font-bold mt-0.5 sm:mt-1">{{ projects().length }}</p>
+    </app-card>
+    <app-card class="p-3 sm:p-4">
+      <p class="text-xs sm:text-sm text-muted-foreground">En cours</p>
+      <p class="text-lg sm:text-xl lg:text-2xl font-bold text-primary mt-0.5 sm:mt-1">{{ getProjectsCountByStatus('en_cours') }}</p>
+    </app-card>
+    <app-card class="p-3 sm:p-4">
+      <p class="text-xs sm:text-sm text-muted-foreground">Budget total</p>
+      <p class="text-lg sm:text-xl lg:text-2xl font-bold mt-0.5 sm:mt-1">{{ (totalBudget() / 1000000000).toFixed(1) }} Mds</p>
+    </app-card>
+    <app-card class="p-3 sm:p-4">
+      <p class="text-xs sm:text-sm text-muted-foreground">Taux moyen</p>
+      <p class="text-lg sm:text-xl lg:text-2xl font-bold text-secondary mt-0.5 sm:mt-1">{{ avgProgress() }}%</p>
+    </app-card>
+  </div>
+
+  <div class="hidden md:block bg-card rounded-xl border border-border overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b bg-muted/50 transition-colors">
+            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground w-24 lg:w-28 text-xs">Code</th>
+            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-xs">Projet</th>
+            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground text-xs">Bailleur</th>
+            <th class="h-10 px-4 text-right align-middle font-medium text-muted-foreground text-xs">Budget</th>
+            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground hidden lg:table-cell text-xs">Période</th>
+            <th class="h-10 px-4 text-left align-middle font-medium text-muted-foreground w-10"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let project of filteredProjects()"
+            class="border-b transition-colors hover:bg-muted/30 cursor-pointer"
+            [ngClass]="{
+              'bg-amber-50/50 dark:bg-amber-950/10': project.workflowStatus === 'brouillon',
+              'bg-blue-50/50 dark:bg-blue-950/10': project.workflowStatus === 'en_validation'
+            }"
+            (click)="project.workflowStatus === 'valide' ? navigateToProject(project.id) : null">
+            <td class="p-4 align-middle font-mono text-xs text-muted-foreground">{{ project.code }}</td>
+            <td class="p-4 align-middle font-medium text-sm max-w-[220px] truncate">
+              <div class="flex items-center gap-2">
+                <span class="truncate">{{ project.name }}</span>
+                <app-badge
+                  variant="outline"
+                  *ngIf="project.workflowStatus && project.workflowStatus !== 'valide'"
+                  class="gap-1 text-xs"
+                  [ngClass]="getWorkflowBadgeClass(project.workflowStatus)">
+                  <lucide-icon [img]="getWorkflowIcon(project.workflowStatus)" class="w-3 h-3"></lucide-icon>
+                  {{ getWorkflowLabel(project.workflowStatus) }}
+                </app-badge>
+              </div>
+            </td>
+            <td class="p-4 align-middle text-sm">{{ project.bailleur }}</td>
+            <td class="p-4 align-middle text-right font-mono text-sm">{{ formatBudget(project.budget) }}</td>
+            <td class="p-4 align-middle hidden lg:table-cell text-xs">
+              <div class="text-muted-foreground">{{ formatDate(project.startDate) }}</div>
+              <div class="text-xs">{{ formatDate(project.endDate) }}</div>
+            </td>
+            <td class="p-4 align-middle">
+              <app-dropdown-menu (click)="$event.stopPropagation()">
+                <app-button app-dropdown-trigger variant="ghost" size="icon" class="h-8 w-8">
+                  <lucide-icon [img]="MoreHorizontalIcon" class="w-4 h-4"></lucide-icon>
+                </app-button>
+                <app-dropdown-menu-item (click)="selectedProject.set(project)">
+                  <lucide-icon [img]="FileTextIcon" class="w-4 h-4 mr-2"></lucide-icon>
+                  Fiche détaillée
+                </app-dropdown-menu-item>
+                <app-dropdown-menu-item *ngIf="project.workflowStatus === 'valide'" (click)="navigateToProject(project.id)">
+                  <lucide-icon [img]="EyeIcon" class="w-4 h-4 mr-2"></lucide-icon>
+                  Voir page
+                </app-dropdown-menu-item>
+                <app-dropdown-menu-item (click)="navigateToProject(project.id)">
+                  <lucide-icon [img]="EditIcon" class="w-4 h-4 mr-2"></lucide-icon>
+                  Modifier
+                </app-dropdown-menu-item>
+                <app-dropdown-menu-separator *ngIf="project.workflowStatus === 'en_validation'"></app-dropdown-menu-separator>
+                <app-dropdown-menu-item *ngIf="project.workflowStatus === 'en_validation'" class="text-primary" (click)="validateProjectId.set(project.id)">
+                  <lucide-icon [img]="CheckCircleIcon" class="w-4 h-4 mr-2"></lucide-icon>
+                  Valider / Rejeter
+                </app-dropdown-menu-item>
+                <app-dropdown-menu-separator></app-dropdown-menu-separator>
+                <app-dropdown-menu-item [destructive]="true" (click)="deleteId.set(project.id)">
+                  <lucide-icon [img]="Trash2Icon" class="w-4 h-4 mr-2"></lucide-icon>
+                  Supprimer
+                </app-dropdown-menu-item>
+              </app-dropdown-menu>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="md:hidden space-y-2">
+    <div
+      *ngFor="let project of filteredProjects()"
+      class="bg-card rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+      (click)="navigateToProject(project.id)">
+      <div class="flex justify-between items-start mb-2">
+        <div class="min-w-0 flex-1">
+          <p class="font-mono text-xs text-muted-foreground">{{ project.code }}</p>
+          <h3 class="font-medium text-sm truncate">{{ project.name }}</h3>
+        </div>
+        <app-badge [class]="getStatusBadgeClass(project.status)">{{ getStatusLabel(project.status) }}</app-badge>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+        <div><span class="font-medium text-foreground">Région:</span> {{ project.region }}</div>
+        <div><span class="font-medium text-foreground">Budget:</span> {{ (project.budget / 1000000).toFixed(0) }} M</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <p class="text-sm text-muted-foreground">
+      Affichage de {{ filteredProjects().length }} projet{{ filteredProjects().length > 1 ? 's' : '' }}
+    </p>
+    <div class="flex gap-2">
+      <app-button variant="outline" size="sm" [disabled]="true">Précédent</app-button>
+      <app-button variant="outline" size="sm">Suivant</app-button>
+    </div>
+  </div>
+</div>
+
+<app-dialog [open]="!!deleteId()" (openChange)="deleteId.set($event ? deleteId() : null)">
+  <app-dialog-header>
+    <app-dialog-title>Supprimer le projet ?</app-dialog-title>
+    <p class="text-sm text-muted-foreground">
+      Cette action est irréversible. Le projet et toutes ses données seront définitivement supprimés.
+    </p>
+  </app-dialog-header>
+  <app-dialog-footer class="mt-4">
+    <app-button variant="outline" (click)="deleteId.set(null)">Annuler</app-button>
+    <app-button variant="destructive" (click)="deleteId() ? handleDeleteProject(deleteId()!) : null">Supprimer</app-button>
+  </app-dialog-footer>
+</app-dialog>
+
+<app-project-detail-dialog
+  [open]="!!selectedProject()"
+  [project]="selectedProject()"
+  (openChange)="$event ? null : selectedProject.set(null)">
+</app-project-detail-dialog>
+
+<app-project-wizard
+  [open]="showCreateForm()"
+  (openChange)="showCreateForm.set($event)"
+  (submit)="handleCreateProject($event)">
+</app-project-wizard>
+
+<app-dialog [open]="!!validateProjectId()" (openChange)="validateProjectId.set($event ? validateProjectId() : null)">
+  <app-dialog-header>
+    <app-dialog-title>Valider le projet ?</app-dialog-title>
+    <p class="text-sm text-muted-foreground">
+      Le projet sera marqué comme validé et pourra démarrer son exécution.
+    </p>
+  </app-dialog-header>
+  <app-dialog-footer class="mt-4">
+    <app-button variant="outline" (click)="validateProjectId.set(null)">Annuler</app-button>
+    <app-button
+      variant="outline"
+      class="text-destructive hover:bg-destructive/10"
+      (click)="validateProjectId() ? handleRejectProject(validateProjectId()!) : null">
+      Rejeter
+    </app-button>
+    <app-button (click)="validateProjectId() ? handleValidateProject(validateProjectId()!) : null">Valider</app-button>
+  </app-dialog-footer>
+</app-dialog>

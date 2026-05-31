@@ -1,0 +1,447 @@
+<div class="space-y-4 animate-fade-in p-6">
+  <!-- PTA selector and filters -->
+  <div class="flex flex-wrap items-center justify-between gap-3 bg-background p-3 rounded-lg border">
+    <div class="flex items-center gap-3 flex-wrap">
+      <!-- PTA selector dropdown -->
+      <div class="relative">
+        <app-button variant="outline" class="gap-2 min-w-[200px] justify-between h-9 text-xs" id="pta-trigger">
+          <lucide-icon [img]="FileTextIcon" class="w-4 h-4"></lucide-icon>
+          <span *ngIf="selectedPTA() as pta; else selectLabel" class="font-medium">{{ pta.code }}</span>
+          <ng-template #selectLabel>Sélectionner un PTA</ng-template>
+          <lucide-icon [img]="ChevronDownIcon" class="w-3.5 h-3.5 opacity-50"></lucide-icon>
+        </app-button>
+        <!-- Custom absolute dropdown mockup if user clicks trigger (or simplify to native select if they prefer) -->
+        <select [ngModel]="selectedPTA()?.id" (ngModelChange)="selectPTA($any($event))" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+          <option *ngFor="let pta of ptaList()" [value]="pta.id">{{ pta.code }} - {{ pta.name }}</option>
+        </select>
+      </div>
+
+      <span *ngIf="selectedPTA() as pta" class="inline-flex items-center">
+        <app-badge [class]="ptaStatusColors[pta.status] + ' text-xs h-7 px-2'">
+          <lucide-icon [img]="pta.status === 'ouvert' ? UnlockIcon : LockIcon" class="w-3.5 h-3.5 mr-1"></lucide-icon>
+          {{ ptaStatusLabels[pta.status] }}
+        </app-badge>
+      </span>
+
+      <!-- Service filter -->
+      <select [ngModel]="selectedService()" (ngModelChange)="selectedService.set($event); selectedProject.set('all'); selectedOperation.set('all')" class="h-9 px-3 rounded-md border text-xs bg-background">
+        <option value="all">Tous les services</option>
+        <option *ngFor="let s of activeServices" [value]="s.id">{{ s.code }} — {{ s.nom }}</option>
+      </select>
+
+      <!-- Project filter -->
+      <select [ngModel]="selectedProject()" (ngModelChange)="onProjectFilterChange($event)" [disabled]="selectedOperation() !== 'all'" class="h-9 px-3 rounded-md border text-xs bg-background">
+        <option value="all">Tous les projets</option>
+        <option *ngFor="let p of availableProjects()" [value]="p.id">{{ p.name }}</option>
+      </select>
+
+      <!-- Operation filter -->
+      <select [ngModel]="selectedOperation()" (ngModelChange)="onOperationFilterChange($event)" [disabled]="selectedProject() !== 'all'" class="h-9 px-3 rounded-md border text-xs bg-background">
+        <option value="all">Toutes les opérations</option>
+        <option *ngFor="let o of availableOperations()" [value]="o.id">{{ o.code }} — {{ o.libelle }}</option>
+      </select>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2">
+      <app-button variant="outline" size="sm" (click)="exportCSV()" class="h-9 text-xs">
+        <lucide-icon [img]="FileTextIcon" class="w-4 h-4 mr-1"></lucide-icon>
+        Export CSV
+      </app-button>
+      <app-button *ngIf="selectedPTA() && !isReadOnly()" size="sm" (click)="openAddActivity()" class="h-9 text-xs">
+        <lucide-icon [img]="PlusIcon" class="w-4 h-4 mr-1"></lucide-icon>
+        Ajouter activité
+      </app-button>
+    </div>
+  </div>
+
+  <div *ngIf="selectedPTA() as pta; else noPtaTemplate" class="space-y-4">
+    <!-- PTA Metric cards -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <app-card class="p-3">
+        <p class="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+          <span>Budget total</span>
+          <lucide-icon [img]="WalletIcon" class="w-3.5 h-3.5 opacity-40"></lucide-icon>
+        </p>
+        <p class="text-base font-bold mt-1 text-primary">{{ formatBudgetFull(totalBudgetPrevu()) }} FCFA</p>
+      </app-card>
+
+      <app-card class="p-3">
+        <p class="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+          <span>Activités</span>
+          <lucide-icon [img]="TargetIcon" class="w-3.5 h-3.5 opacity-40"></lucide-icon>
+        </p>
+        <p class="text-base font-bold mt-1">{{ totalActivites() }}</p>
+      </app-card>
+
+      <app-card class="p-3">
+        <p class="text-[10px] text-muted-foreground">T1 {{ pta.year }}</p>
+        <p class="text-base font-bold mt-1">{{ formatBudget(budgetByQuarter().T1) }} FCFA</p>
+      </app-card>
+
+      <app-card class="p-3">
+        <p class="text-[10px] text-muted-foreground">T2 {{ pta.year }}</p>
+        <p class="text-base font-bold mt-1">{{ formatBudget(budgetByQuarter().T2) }} FCFA</p>
+      </app-card>
+
+      <app-card class="p-3">
+        <p class="text-[10px] text-muted-foreground">T3 {{ pta.year }}</p>
+        <p class="text-base font-bold mt-1">{{ formatBudget(budgetByQuarter().T3) }} FCFA</p>
+      </app-card>
+
+      <app-card class="p-3">
+        <p class="text-[10px] text-muted-foreground">T4 {{ pta.year }}</p>
+        <p class="text-base font-bold mt-1">{{ formatBudget(budgetByQuarter().T4) }} FCFA</p>
+      </app-card>
+    </div>
+
+    <!-- View Mode Selector -->
+    <app-tabs [defaultValue]="viewMode()" (valueChange)="viewMode.set($event)" class="w-full">
+      <app-tabs-list class="grid w-full max-w-md grid-cols-3 h-10 bg-muted p-1 rounded-lg">
+        <app-tabs-trigger value="table" class="flex items-center justify-center gap-1.5 text-xs">
+          <lucide-icon [img]="LayoutGridIcon" class="w-3.5 h-3.5"></lucide-icon>
+          Activités
+        </app-tabs-trigger>
+        <app-tabs-trigger value="deliverables" class="flex items-center justify-center gap-1.5 text-xs">
+          <lucide-icon [img]="PackageIcon" class="w-3.5 h-3.5"></lucide-icon>
+          Synthèse livrables
+        </app-tabs-trigger>
+        <app-tabs-trigger value="gantt" class="flex items-center justify-center gap-1.5 text-xs">
+          <lucide-icon [img]="CalendarIcon" class="w-3.5 h-3.5"></lucide-icon>
+          Planning Gantt
+        </app-tabs-trigger>
+      </app-tabs-list>
+
+      <!-- View: Table list of activities -->
+      <app-tabs-content value="table" class="mt-4">
+        <app-card>
+          <div class="p-4 border-b flex justify-between items-center bg-muted/20">
+            <h3 class="text-sm font-bold flex items-center gap-2">
+              <lucide-icon [img]="FolderOpenIcon" class="w-4 h-4 text-primary"></lucide-icon>
+              Activités du plan de travail annuel
+            </h3>
+            <div class="inline-flex rounded-md border bg-muted/40 p-0.5 text-xs">
+              <button (click)="displayMode.set('budget')" [class]="'px-2.5 py-1 rounded font-medium ' + (displayMode() === 'budget' ? 'bg-background shadow-sm border text-foreground' : 'text-muted-foreground')">Vue Budget</button>
+              <button (click)="displayMode.set('deliverables')" [class]="'px-2.5 py-1 rounded font-medium ' + (displayMode() === 'deliverables' ? 'bg-background shadow-sm border text-foreground' : 'text-muted-foreground')">Vue Livrables</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="border-b bg-muted/30 text-left font-semibold text-muted-foreground">
+                  <th class="p-3 min-w-[200px]">Activité / Livrable</th>
+                  <th class="p-3">Nature</th>
+                  <th class="p-3 text-center">Statut</th>
+                  <th class="p-3 text-right">Budget Annuel</th>
+                  <th class="p-3 text-right">T1</th>
+                  <th class="p-3 text-right">T2</th>
+                  <th class="p-3 text-right">T3</th>
+                  <th class="p-3 text-right">T4</th>
+                  <th class="p-3 text-center" *ngIf="!isReadOnly()">Actions</th>
+                </tr>
+              </thead>
+              <tbody *ngFor="let srv of groupedActivities()" class="border-b">
+                <!-- Service group header -->
+                <tr class="bg-primary/5 font-bold border-b text-primary">
+                  <td colspan="9" class="p-2.5">
+                    <lucide-icon [img]="Building2Icon" class="w-3.5 h-3.5 inline mr-1.5"></lucide-icon>
+                    {{ srv.label }}
+                  </td>
+                </tr>
+
+                <ng-container *ngFor="let grp of srv.groups">
+                  <!-- Project/Operation subheader -->
+                  <tr class="bg-muted/10 font-semibold border-b text-muted-foreground">
+                    <td colspan="9" class="p-2 pl-6">
+                      <lucide-icon [img]="grp.type === 'projet' ? TargetIcon : FolderOpenIcon" class="w-3.5 h-3.5 inline mr-1.5"></lucide-icon>
+                      {{ grp.label }}
+                    </td>
+                  </tr>
+
+                  <!-- Activities rows -->
+                  <tr *ngFor="let act of grp.activities" class="border-b hover:bg-muted/30">
+                    <td class="p-3 pl-10">
+                      <div class="font-bold text-foreground cursor-pointer hover:underline" (click)="openActivityDetail(act)">
+                        {{ act.name }}
+                      </div>
+                      <div class="text-[10px] text-muted-foreground mt-0.5" *ngIf="act.responsable">
+                        Resp: {{ act.responsable }}
+                      </div>
+                    </td>
+                    <td class="p-3 text-muted-foreground font-medium">{{ act.nature }}</td>
+                    <td class="p-3 text-center">
+                      <app-badge [variant]="act.validationStatus === 'valide' ? 'default' : 'secondary'" class="text-[10px]">
+                        {{ act.validationStatus === 'valide' ? 'Validé' : 'Brouillon' }}
+                      </app-badge>
+                    </td>
+                    <td class="p-3 text-right font-bold">{{ formatBudgetFull(act.budgetTotal) }}</td>
+                    
+                    <!-- Budgets / deliverables values per quarter -->
+                    <ng-container *ngIf="displayMode() === 'budget'; else delModeCells">
+                      <td class="p-3 text-right font-mono text-muted-foreground">{{ formatBudget(act.budgetT1) }}</td>
+                      <td class="p-3 text-right font-mono text-muted-foreground">{{ formatBudget(act.budgetT2) }}</td>
+                      <td class="p-3 text-right font-mono text-muted-foreground">{{ formatBudget(act.budgetT3) }}</td>
+                      <td class="p-3 text-right font-mono text-muted-foreground">{{ formatBudget(act.budgetT4) }}</td>
+                    </ng-container>
+                    
+                    <ng-template #delModeCells>
+                      <td colspan="4" class="p-3 text-center text-[10px] text-muted-foreground italic">
+                        <div *ngFor="let d of act.deliverables" class="text-[10px]">
+                          {{ d.unit }}: (T1:{{ d.targetT1 || 0 }}, T2:{{ d.targetT2 || 0 }}, T3:{{ d.targetT3 || 0 }}, T4:{{ d.targetT4 || 0 }})
+                        </div>
+                        <div *ngIf="!act.deliverables || act.deliverables.length === 0" class="text-[10px] italic">Aucun livrable</div>
+                      </td>
+                    </ng-template>
+
+                    <td class="p-3 text-center" *ngIf="!isReadOnly()">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <app-button variant="ghost" size="icon" class="h-7 w-7 text-primary" (click)="openEditActivity(act)" *ngIf="act.validationStatus !== 'valide'">
+                          <lucide-icon [img]="EditIcon" class="w-3.5 h-3.5"></lucide-icon>
+                        </app-button>
+                        <app-button variant="ghost" size="icon" class="h-7 w-7 text-emerald-600" (click)="handleValidateActivity(act)" *ngIf="act.validationStatus !== 'valide'">
+                          <lucide-icon [img]="CheckCircleIcon" class="w-3.5 h-3.5"></lucide-icon>
+                        </app-button>
+                        <app-button variant="ghost" size="icon" class="h-7 w-7 text-amber-600" (click)="handleUnlockActivity(act)" *ngIf="act.validationStatus === 'valide'">
+                          <lucide-icon [img]="UnlockIcon" class="w-3.5 h-3.5"></lucide-icon>
+                        </app-button>
+                        <app-button variant="ghost" size="icon" class="h-7 w-7 text-red-600" (click)="handleDeleteActivity(act)" *ngIf="act.validationStatus !== 'valide'">
+                          <lucide-icon [img]="TrashIcon" class="w-3.5 h-3.5"></lucide-icon>
+                        </app-button>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
+        </app-card>
+      </app-tabs-content>
+
+      <!-- View: Deliverables Synthesis -->
+      <app-tabs-content value="deliverables" class="mt-4">
+        <app-card class="p-4 space-y-3">
+          <h3 class="text-sm font-bold flex items-center gap-2 border-b pb-2">
+            <lucide-icon [img]="PackageIcon" class="w-4 h-4 text-primary"></lucide-icon>
+            Synthèse des Livrables Planifiés
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div *ngFor="let act of filteredActivities()" class="p-3 border rounded-lg bg-muted/10 space-y-2">
+              <div class="flex justify-between items-start border-b pb-1.5">
+                <div>
+                  <h4 class="font-bold text-xs text-foreground">{{ act.name }}</h4>
+                  <p class="text-[9px] text-muted-foreground">{{ act.project }}</p>
+                </div>
+                <app-badge variant="outline" class="text-[9px]">{{ act.nature }}</app-badge>
+              </div>
+              <div class="space-y-1">
+                <div *ngFor="let del of act.deliverables" class="text-[11px] bg-background p-2 rounded border flex flex-wrap justify-between items-center">
+                  <span class="font-medium">{{ del.unit }}</span>
+                  <div class="flex items-center gap-2 font-mono">
+                    <span class="bg-primary/5 border px-1.5 py-0.5 rounded text-[10px]">T1: {{ del.targetT1 || 0 }}</span>
+                    <span class="bg-primary/5 border px-1.5 py-0.5 rounded text-[10px]">T2: {{ del.targetT2 || 0 }}</span>
+                    <span class="bg-primary/5 border px-1.5 py-0.5 rounded text-[10px]">T3: {{ del.targetT3 || 0 }}</span>
+                    <span class="bg-primary/5 border px-1.5 py-0.5 rounded text-[10px]">T4: {{ del.targetT4 || 0 }}</span>
+                    <span class="bg-primary/10 font-bold px-1.5 py-0.5 rounded text-[10px] border border-primary/20">Total: {{ del.targetValue }}</span>
+                  </div>
+                </div>
+                <div *ngIf="!act.deliverables || act.deliverables.length === 0" class="text-[10px] text-muted-foreground italic text-center py-2">
+                  Aucun livrable spécifique défini pour cette activité.
+                </div>
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </app-tabs-content>
+
+      <!-- View: Gantt simple visualization mockup -->
+      <app-tabs-content value="gantt" class="mt-4">
+        <app-card class="p-4">
+          <h3 class="text-sm font-bold flex items-center gap-2 border-b pb-2 mb-4">
+            <lucide-icon [img]="CalendarIcon" class="w-4 h-4 text-primary"></lucide-icon>
+            Visualisation Gantt des activités
+          </h3>
+          <div class="space-y-4">
+            <div *ngFor="let act of filteredActivities()" class="space-y-1">
+              <div class="flex justify-between text-[11px]">
+                <span class="font-bold truncate max-w-xs">{{ act.name }}</span>
+                <span class="text-muted-foreground font-mono">{{ act.nature }}</span>
+              </div>
+              <div class="h-6 w-full bg-muted rounded relative overflow-hidden">
+                <!-- T1 bar -->
+                <div *ngIf="act.budgetT1 > 0" class="absolute top-0 bottom-0 left-0 w-1/4 bg-primary/30 border-r border-primary/10 flex items-center justify-center text-[8px] font-bold text-primary">T1</div>
+                <!-- T2 bar -->
+                <div *ngIf="act.budgetT2 > 0" class="absolute top-0 bottom-0 left-1/4 w-1/4 bg-primary/40 border-r border-primary/10 flex items-center justify-center text-[8px] font-bold text-primary">T2</div>
+                <!-- T3 bar -->
+                <div *ngIf="act.budgetT3 > 0" class="absolute top-0 bottom-0 left-2/4 w-1/4 bg-primary/50 border-r border-primary/10 flex items-center justify-center text-[8px] font-bold text-primary">T3</div>
+                <!-- T4 bar -->
+                <div *ngIf="act.budgetT4 > 0" class="absolute top-0 bottom-0 left-3/4 w-1/4 bg-primary/60 flex items-center justify-center text-[8px] font-bold text-primary">T4</div>
+              </div>
+            </div>
+          </div>
+        </app-card>
+      </app-tabs-content>
+    </app-tabs>
+  </div>
+
+  <ng-template #noPtaTemplate>
+    <div class="text-center py-12 bg-background border border-dashed rounded-lg">
+      <lucide-icon [img]="FolderOpenIcon" class="w-8 h-8 mx-auto text-muted-foreground mb-3 opacity-50"></lucide-icon>
+      <p class="text-sm font-medium text-muted-foreground">Aucun plan de travail annuel trouvé ou sélectionné.</p>
+    </div>
+  </ng-template>
+
+  <!-- Modal Form: Add / Edit activity -->
+  <div *ngIf="activityFormOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-background rounded-lg max-w-lg w-full border shadow-lg overflow-hidden animate-scale-in">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 class="font-bold text-base text-foreground">
+          {{ editingActivity() ? 'Modifier l\'activité' : 'Ajouter une activité PTA' }}
+        </h3>
+        <button (click)="activityFormOpen = false" class="p-1 hover:bg-muted rounded">
+          <lucide-icon [img]="XIcon" class="w-4 h-4"></lucide-icon>
+        </button>
+      </div>
+      <div class="p-4 space-y-4 max-h-[70vh] overflow-y-auto text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-muted-foreground">Intitulé de l'activité *</label>
+          <input type="text" [(ngModel)]="activityFormName" class="w-full p-2 border rounded bg-background text-foreground" placeholder="Nom de l'activité..." />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label class="font-bold text-muted-foreground">Nature *</label>
+            <select [(ngModel)]="activityFormNature" class="w-full p-2 border rounded bg-background text-foreground">
+              <option value="Travaux">Travaux</option>
+              <option value="Étude">Étude</option>
+              <option value="Formation">Formation</option>
+              <option value="Équipement">Équipement</option>
+              <option value="Sensibilisation">Sensibilisation</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Suivi & Évaluation">Suivi & Évaluation</option>
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="font-bold text-muted-foreground">Responsable *</label>
+            <input type="text" [(ngModel)]="activityFormResponsable" class="w-full p-2 border rounded bg-background text-foreground" placeholder="Nom du responsable..." />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1">
+            <label class="font-bold text-muted-foreground">Service Responsable *</label>
+            <select [(ngModel)]="activityFormService" class="w-full p-2 border rounded bg-background text-foreground">
+              <option *ngFor="let s of activeServices" [value]="s.id">{{ s.code }} - {{ s.nom }}</option>
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="font-bold text-muted-foreground">Rattachement Projet (optionnel)</label>
+            <select [(ngModel)]="activityFormProject" class="w-full p-2 border rounded bg-background text-foreground">
+              <option value="">Aucun (Activité Transverse)</option>
+              <option *ngFor="let p of availableProjects()" [value]="p.id">{{ p.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="space-y-1" *ngIf="!activityFormProject">
+          <label class="font-bold text-muted-foreground">Opération Transverse *</label>
+          <select [(ngModel)]="activityFormOperation" class="w-full p-2 border rounded bg-background text-foreground">
+            <option value="">Sélectionner une opération...</option>
+            <option *ngFor="let o of availableOperations()" [value]="o.id">{{ o.code }} - {{ o.libelle }}</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-muted-foreground">Description</label>
+          <textarea [(ngModel)]="activityFormDescription" rows="2" class="w-full p-2 border rounded bg-background text-foreground" placeholder="Détails de l'activité..."></textarea>
+        </div>
+
+        <div class="space-y-2 border-t pt-3">
+          <h4 class="font-bold text-muted-foreground text-[10px] uppercase">Planification Budgétaire par Trimestre (FCFA)</h4>
+          <div class="grid grid-cols-4 gap-2">
+            <div class="space-y-1">
+              <label class="font-bold text-muted-foreground">Budget T1</label>
+              <input type="number" [(ngModel)]="activityFormBudgetT1" class="w-full p-2 border rounded bg-background text-foreground font-mono text-right" />
+            </div>
+            <div class="space-y-1">
+              <label class="font-bold text-muted-foreground">Budget T2</label>
+              <input type="number" [(ngModel)]="activityFormBudgetT2" class="w-full p-2 border rounded bg-background text-foreground font-mono text-right" />
+            </div>
+            <div class="space-y-1">
+              <label class="font-bold text-muted-foreground">Budget T3</label>
+              <input type="number" [(ngModel)]="activityFormBudgetT3" class="w-full p-2 border rounded bg-background text-foreground font-mono text-right" />
+            </div>
+            <div class="space-y-1">
+              <label class="font-bold text-muted-foreground">Budget T4</label>
+              <input type="number" [(ngModel)]="activityFormBudgetT4" class="w-full p-2 border rounded bg-background text-foreground font-mono text-right" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 p-4 border-t bg-muted/10">
+        <app-button variant="outline" size="sm" (click)="activityFormOpen = false">Annuler</app-button>
+        <app-button size="sm" (click)="handleSaveActivity()">Enregistrer</app-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Popup: Activity detailed view -->
+  <div *ngIf="activityDetailOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-background rounded-lg max-w-md w-full border shadow-lg overflow-hidden animate-scale-in" *ngIf="selectedActivityDetail() as act">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 class="font-bold text-base text-foreground">Détail de l'activité</h3>
+        <button (click)="activityDetailOpen = false" class="p-1 hover:bg-muted rounded">
+          <lucide-icon [img]="XIcon" class="w-4 h-4"></lucide-icon>
+        </button>
+      </div>
+      <div class="p-4 space-y-3 text-xs">
+        <div>
+          <span class="text-muted-foreground block font-medium">Intitulé</span>
+          <span class="font-bold text-sm text-foreground">{{ act.name }}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <span class="text-muted-foreground block font-medium">Nature</span>
+            <span class="font-bold text-foreground">{{ act.nature }}</span>
+          </div>
+          <div>
+            <span class="text-muted-foreground block font-medium">Responsable</span>
+            <span class="font-bold text-foreground">{{ act.responsable }}</span>
+          </div>
+        </div>
+        <div>
+          <span class="text-muted-foreground block font-medium">Description</span>
+          <span class="text-foreground whitespace-pre-wrap block leading-relaxed">{{ act.description || 'Aucune description fournie.' }}</span>
+        </div>
+        <div class="border-t pt-2 space-y-2">
+          <span class="text-muted-foreground block font-medium">Répartition Budgétaire</span>
+          <div class="grid grid-cols-4 gap-2 text-center bg-muted/30 p-2 rounded">
+            <div>
+              <p class="text-[9px] text-muted-foreground">T1</p>
+              <p class="font-bold font-mono text-[11px]">{{ formatBudget(act.budgetT1) }}</p>
+            </div>
+            <div>
+              <p class="text-[9px] text-muted-foreground">T2</p>
+              <p class="font-bold font-mono text-[11px]">{{ formatBudget(act.budgetT2) }}</p>
+            </div>
+            <div>
+              <p class="text-[9px] text-muted-foreground">T3</p>
+              <p class="font-bold font-mono text-[11px]">{{ formatBudget(act.budgetT3) }}</p>
+            </div>
+            <div>
+              <p class="text-[9px] text-muted-foreground">T4</p>
+              <p class="font-bold font-mono text-[11px]">{{ formatBudget(act.budgetT4) }}</p>
+            </div>
+          </div>
+          <div class="flex justify-between font-bold text-sm pt-1">
+            <span class="text-foreground">Budget Total:</span>
+            <span class="text-primary font-mono">{{ formatBudgetFull(act.budgetTotal) }} FCFA</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end p-4 border-t bg-muted/10">
+        <app-button size="sm" (click)="activityDetailOpen = false">Fermer</app-button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,88 @@
+<aside class="w-64 min-h-screen sidebar-gradient flex flex-col border-r border-sidebar-border">
+  <!-- Logo -->
+  <div class="p-6 border-b border-sidebar-border">
+    <a routerLink="/" class="flex items-center gap-3">
+      <div class="bg-white rounded-lg p-2">
+        <img src="assets/logo_OFOR.png" alt="OFOR" class="h-8 w-auto" />
+      </div>
+      <div class="text-sidebar-foreground">
+        <h1 class="font-heading font-bold text-lg leading-tight">OFOR</h1>
+        <p class="text-xs opacity-80">Suivi des Projets</p>
+      </div>
+    </a>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 p-4 space-y-1">
+    <p class="text-xs uppercase tracking-wider text-sidebar-foreground/50 px-4 mb-3 font-semibold">
+      Menu principal
+    </p>
+    
+    <a *ngFor="let item of mainNavItems" 
+       [routerLink]="item.to" 
+       routerLinkActive="bg-sidebar-accent text-sidebar-foreground nav-item-active"
+       [routerLinkActiveOptions]="{exact: item.to === '/'}"
+       class="nav-item flex items-center gap-3 px-4 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+      <lucide-icon [img]="item.icon" class="w-5 h-5"></lucide-icon>
+      <span class="font-medium">{{ item.label }}</span>
+    </a>
+
+    <div class="pt-4">
+      <p class="text-xs uppercase tracking-wider text-sidebar-foreground/50 px-4 mb-3 font-semibold">
+        Référentiels
+      </p>
+      
+      <button
+        (click)="toggleReferentiel()"
+        class="nav-item w-full flex justify-between items-center px-4 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+        [class.nav-item-active]="referentielOpen()"
+        [class.bg-sidebar-accent]="referentielOpen()"
+        [class.text-sidebar-foreground]="referentielOpen()">
+        <span class="flex items-center gap-3">
+          <lucide-icon [img]="icons.Settings" class="w-5 h-5"></lucide-icon>
+          <span class="font-medium">Référentiels</span>
+        </span>
+        <lucide-icon 
+          [img]="icons.ChevronDown" 
+          class="w-4 h-4 transition-transform duration-200"
+          [class.rotate-180]="referentielOpen()">
+        </lucide-icon>
+      </button>
+      
+      <div *ngIf="referentielOpen()" class="ml-4 mt-1 space-y-1 animate-fade-in">
+        <a *ngFor="let item of referentielItems" 
+           [routerLink]="item.to"
+           routerLinkActive="bg-sidebar-accent text-sidebar-foreground"
+           class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+          <lucide-icon [img]="item.icon" class="w-4 h-4"></lucide-icon>
+          <span>{{ item.label }}</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="pt-4">
+      <a routerLink="/administration" 
+         routerLinkActive="bg-sidebar-accent text-sidebar-foreground nav-item-active"
+         class="nav-item flex items-center gap-3 px-4 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+        <lucide-icon [img]="icons.Settings" class="w-5 h-5"></lucide-icon>
+        <span class="font-medium">Administration</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- User section -->
+  <div class="p-4 border-t border-sidebar-border">
+    <div class="flex items-center gap-3 px-4 py-3">
+      <div class="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
+        <span class="text-sidebar-foreground font-semibold">AD</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-medium text-sidebar-foreground">Admin OFOR</p>
+        <p class="text-xs text-sidebar-foreground/60">Administrateur</p>
+      </div>
+      <button class="p-2 rounded-lg hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors">
+        <lucide-icon [img]="icons.LogOut" class="w-4 h-4"></lucide-icon>
+      </button>
+    </div>
+  </div>
+</aside>

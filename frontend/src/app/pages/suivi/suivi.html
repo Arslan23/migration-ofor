@@ -1,0 +1,722 @@
+<div class="space-y-4 animate-fade-in p-6">
+  <!-- Header Filter Controls -->
+  <div class="flex flex-wrap items-center justify-between gap-3 bg-background p-3 rounded-lg border">
+    <div class="flex items-center gap-3 flex-wrap">
+      <!-- Search Input -->
+      <div class="relative w-64">
+        <lucide-icon [img]="SearchIcon" class="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground"></lucide-icon>
+        <input type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Rechercher..." class="h-9 w-full pl-9 pr-4 rounded-md border text-xs bg-background" />
+      </div>
+
+      <!-- Project Filter -->
+      <select [ngModel]="selectedProjectFilter()" (ngModelChange)="selectedProjectFilter.set($event)" class="h-9 px-3 rounded-md border text-xs bg-background">
+        <option value="all">Tous les projets</option>
+        <option *ngFor="let p of projectsList()" [value]="p.id">{{ p.name }}</option>
+      </select>
+
+      <!-- Status Filter for Fiches -->
+      <select *ngIf="activeMainTab() === 'fiches'" [ngModel]="selectedStatusFilter()" (ngModelChange)="selectedStatusFilter.set($event)" class="h-9 px-3 rounded-md border text-xs bg-background">
+        <option value="all">Tous les statuts</option>
+        <option value="brouillon">Brouillon</option>
+        <option value="soumis">Soumis (En attente validation)</option>
+        <option value="valide">Validé (En attente approbation)</option>
+        <option value="approuve">Approuvé</option>
+      </select>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2">
+      <app-button *ngIf="activeMainTab() === 'collectes'" size="sm" (click)="openCreateCollecte()" class="h-9 text-xs">
+        <lucide-icon [img]="PlusIcon" class="w-4 h-4 mr-1"></lucide-icon>
+        Nouvelle collecte
+      </app-button>
+    </div>
+  </div>
+
+  <!-- KPI Metric Cards Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+    <app-card class="p-4 bg-gradient-to-br from-primary/5 to-transparent">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-[10px] text-muted-foreground uppercase tracking-wider">Avancement Physique Global</p>
+          <h3 class="text-xl font-bold mt-1 text-primary">{{ activitiesExecutionStats().progress }}%</h3>
+        </div>
+        <div class="p-2 rounded-full bg-primary/10 text-primary">
+          <lucide-icon [img]="BarChart3Icon" class="w-5 h-5"></lucide-icon>
+        </div>
+      </div>
+      <div class="mt-3">
+        <app-progress [value]="activitiesExecutionStats().progress" class="h-1.5"></app-progress>
+        <p class="text-[10px] text-muted-foreground mt-1.5 flex justify-between">
+          <span>{{ activitiesExecutionStats().finished }} activités terminées</span>
+          <span>sur {{ activitiesExecutionStats().total }}</span>
+        </p>
+      </div>
+    </app-card>
+
+    <app-card class="p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-[10px] text-muted-foreground uppercase tracking-wider">Consommation Budgétaire</p>
+          <h3 class="text-xl font-bold mt-1 text-emerald-600">{{ formatBudget(activitiesExecutionStats().totalSpent) }} FCFA</h3>
+        </div>
+        <div class="p-2 rounded-full bg-emerald-50 text-emerald-600">
+          <lucide-icon [img]="WalletIcon" class="w-5 h-5"></lucide-icon>
+        </div>
+      </div>
+      <div class="mt-3">
+        <app-progress [value]="activitiesExecutionStats().rate" class="h-1.5 bg-emerald-100" indicatorClass="bg-emerald-600"></app-progress>
+        <p class="text-[10px] text-muted-foreground mt-1.5 flex justify-between">
+          <span>Taux conso: {{ activitiesExecutionStats().rate }}%</span>
+          <span>Prévu: {{ formatBudget(activitiesExecutionStats().totalBudget) }} FCFA</span>
+        </p>
+      </div>
+    </app-card>
+
+    <app-card class="p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-[10px] text-muted-foreground uppercase tracking-wider">En attente de validation</p>
+          <h3 class="text-xl font-bold mt-1 text-blue-600">{{ fichesApprovalStats().soumis }} fiches</h3>
+        </div>
+        <div class="p-2 rounded-full bg-blue-50 text-blue-600">
+          <lucide-icon [img]="ClockIcon" class="w-5 h-5"></lucide-icon>
+        </div>
+      </div>
+      <p class="text-[10px] text-muted-foreground mt-4 italic">Fiches soumises par les responsables de projet</p>
+    </app-card>
+
+    <app-card class="p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-[10px] text-muted-foreground uppercase tracking-wider">En attente d'approbation</p>
+          <h3 class="text-xl font-bold mt-1 text-amber-600">{{ fichesApprovalStats().valide }} fiches</h3>
+        </div>
+        <div class="p-2 rounded-full bg-amber-50 text-amber-600">
+          <lucide-icon [img]="CheckCircleIcon" class="w-5 h-5"></lucide-icon>
+        </div>
+      </div>
+      <p class="text-[10px] text-muted-foreground mt-4 italic">Fiches validées par la DPSE, en attente DG</p>
+    </app-card>
+  </div>
+
+  <!-- Main View Tabs Navigation -->
+  <app-tabs [defaultValue]="activeMainTab()" (valueChange)="activeMainTab.set($event)" class="w-full">
+    <app-tabs-list class="grid w-full max-w-md grid-cols-3 h-10 bg-muted p-1 rounded-lg">
+      <app-tabs-trigger value="execution" class="flex items-center justify-center gap-1.5 text-xs font-semibold">
+        <lucide-icon [img]="BarChart3Icon" class="w-3.5 h-3.5"></lucide-icon>
+        Suivi d'Exécution
+      </app-tabs-trigger>
+      <app-tabs-trigger value="collectes" class="flex items-center justify-center gap-1.5 text-xs font-semibold">
+        <lucide-icon [img]="CalendarIcon" class="w-3.5 h-3.5"></lucide-icon>
+        Saisie Collectes
+      </app-tabs-trigger>
+      <app-tabs-trigger value="fiches" class="flex items-center justify-center gap-1.5 text-xs font-semibold">
+        <lucide-icon [img]="CheckCircleIcon" class="w-3.5 h-3.5"></lucide-icon>
+        Workflow Fiches
+      </app-tabs-trigger>
+    </app-tabs-list>
+
+    <!-- Content 1: Execution Dashboard -->
+    <app-tabs-content value="execution" class="mt-4">
+      <app-card>
+        <div class="p-4 border-b flex justify-between items-center bg-muted/20">
+          <h3 class="text-sm font-bold flex items-center gap-2">
+            <lucide-icon [img]="FolderOpenIcon" class="w-4 h-4 text-primary"></lucide-icon>
+            Tableau de Bord des Réalisations Physiques et Financières
+          </h3>
+
+          <div class="inline-flex rounded-md border bg-muted/40 p-0.5 text-xs">
+            <button (click)="activeSubTab.set('activites')" [class]="'px-2.5 py-1 rounded font-medium ' + (activeSubTab() === 'activites' ? 'bg-background shadow-sm border text-foreground' : 'text-muted-foreground')">Activités</button>
+            <button (click)="activeSubTab.set('indicateurs')" [class]="'px-2.5 py-1 rounded font-medium ' + (activeSubTab() === 'indicateurs' ? 'bg-background shadow-sm border text-foreground' : 'text-muted-foreground')">Indicateurs</button>
+          </div>
+        </div>
+
+        <!-- Sub Tab 1.1: PTA Activities execution -->
+        <div *ngIf="activeSubTab() === 'activites'" class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="border-b bg-muted/30 text-left font-semibold text-muted-foreground">
+                <th class="p-3">Activité / Projet</th>
+                <th class="p-3">Workflow / Étape Actuelle</th>
+                <th class="p-3 text-center">Progression physique</th>
+                <th class="p-3 text-right">Budget Prévu</th>
+                <th class="p-3 text-right">Dépenses Réalisées</th>
+                <th class="p-3 text-center">Taux financier</th>
+                <th class="p-3">Livrables (Progression)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let f of filteredFichesSuivi()" class="border-b hover:bg-muted/20">
+                <td class="p-3">
+                  <div class="font-bold text-foreground">{{ f.activityName }}</div>
+                  <div class="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                    <lucide-icon [img]="Building2Icon" class="w-3 h-3"></lucide-icon>
+                    <span>Projet: {{ f.projectName }}</span>
+                  </div>
+                </td>
+                <td class="p-3 font-medium">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-primary/80"></span>
+                    <span>{{ f.currentStepName || 'Non démarrée' }}</span>
+                  </div>
+                  <div class="text-[9px] text-muted-foreground mt-0.5 font-normal">{{ f.workflowName }}</div>
+                </td>
+                <td class="p-3">
+                  <div class="flex items-center gap-2 justify-center">
+                    <app-progress [value]="f.progressPercentage" class="h-1.5 w-16"></app-progress>
+                    <span class="font-mono font-bold">{{ f.progressPercentage }}%</span>
+                  </div>
+                </td>
+                <td class="p-3 text-right font-mono font-medium">{{ formatNumber(f.budgetPrevu) }}</td>
+                <td class="p-3 text-right font-mono text-emerald-600 font-bold">{{ formatNumber(f.depensesCumulees) }}</td>
+                <td class="p-3 text-center">
+                  <app-badge [variant]="f.depensesCumulees / f.budgetPrevu > 0.8 ? 'default' : 'secondary'" class="text-[10px] font-mono">
+                    {{ f.budgetPrevu > 0 ? Math.round((f.depensesCumulees / f.budgetPrevu) * 100) : 0 }}%
+                  </app-badge>
+                </td>
+                <td class="p-3 text-muted-foreground">
+                  <div *ngFor="let del of f.livrables" class="text-[10px]">
+                    {{ del.unit }}: <span class="font-bold text-foreground font-mono">{{ del.currentValue }}</span> / <span class="font-mono">{{ del.targetValue }}</span>
+                  </div>
+                  <div *ngIf="!f.livrables || f.livrables.length === 0" class="text-[10px] italic">Aucun livrable</div>
+                </td>
+              </tr>
+              <tr *ngIf="filteredFichesSuivi().length === 0">
+                <td colspan="7" class="p-8 text-center text-muted-foreground italic">Aucune fiche de suivi d'activité trouvée pour les filtres actifs.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Sub Tab 1.2: Project indicators execution -->
+        <div *ngIf="activeSubTab() === 'indicateurs'" class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="border-b bg-muted/30 text-left font-semibold text-muted-foreground">
+                <th class="p-3">Projet</th>
+                <th class="p-3">Code / Indicateur de Performance</th>
+                <th class="p-3">Unité de Mesure</th>
+                <th class="p-3 text-right">Référence baseline</th>
+                <th class="p-3 text-right">Cible de performance</th>
+                <th class="p-3 text-right text-primary font-bold">Dernière valeur réalisée</th>
+                <th class="p-3 text-center">Taux de réalisation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <ng-container *ngFor="let fi of filteredFichesIndicateurs()">
+                <tr *ngFor="let ind of fi.indicateurs" class="border-b hover:bg-muted/20">
+                  <td class="p-3 font-bold">{{ fi.projectName }}</td>
+                  <td class="p-3">
+                    <span class="font-mono text-muted-foreground mr-1.5">[{{ ind.indicateurCode }}]</span>
+                    <span class="font-medium text-foreground">{{ ind.indicateurName }}</span>
+                  </td>
+                  <td class="p-3 text-muted-foreground">{{ ind.unit }}</td>
+                  <td class="p-3 text-right font-mono">{{ ind.baselineValue }}</td>
+                  <td class="p-3 text-right font-mono">{{ ind.targetValue }}</td>
+                  <td class="p-3 text-right font-mono text-primary font-bold">{{ ind.currentValue }}</td>
+                  <td class="p-3 text-center">
+                    <app-badge [variant]="(ind.currentValue - ind.baselineValue) / (ind.targetValue - ind.baselineValue) >= 0.8 ? 'default' : 'secondary'" class="text-[10px] font-mono">
+                      {{ (ind.targetValue - ind.baselineValue) > 0 ? Math.round(((ind.currentValue - ind.baselineValue) / (ind.targetValue - ind.baselineValue)) * 100) : 0 }}%
+                    </app-badge>
+                  </td>
+                </tr>
+              </ng-container>
+              <tr *ngIf="filteredFichesIndicateurs().length === 0">
+                <td colspan="7" class="p-8 text-center text-muted-foreground italic">Aucune fiche d'indicateur trouvée pour les filtres actifs.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </app-card>
+    </app-tabs-content>
+
+    <!-- Content 2: Collectes Tab -->
+    <app-tabs-content value="collectes" class="mt-4">
+      <app-card>
+        <div class="p-4 border-b bg-muted/20">
+          <h3 class="text-sm font-bold flex items-center gap-2">
+            <lucide-icon [img]="CalendarIcon" class="w-4 h-4 text-primary"></lucide-icon>
+            Sessions de Collecte Trimestrielle par Projet
+          </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="border-b bg-muted/30 text-left font-semibold text-muted-foreground">
+                <th class="p-3">Code collecte</th>
+                <th class="p-3">Projet</th>
+                <th class="p-3">Date de collecte</th>
+                <th class="p-3">Description / Période</th>
+                <th class="p-3">Statut</th>
+                <th class="p-3 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let col of filteredCollectes()" class="border-b hover:bg-muted/20">
+                <td class="p-3 font-mono font-bold">{{ col.code }}</td>
+                <td class="p-3">{{ col.projectName }}</td>
+                <td class="p-3 font-mono">{{ col.dateCollecte | date:'dd/MM/yyyy' }}</td>
+                <td class="p-3 text-muted-foreground">{{ col.description }}</td>
+                <td class="p-3">
+                  <app-badge [variant]="col.status === 'cloturee' ? 'secondary' : 'default'" class="text-[10px]">
+                    {{ col.status === 'cloturee' ? 'Clôturée' : 'En cours' }}
+                  </app-badge>
+                </td>
+                <td class="p-3 text-center">
+                  <div class="flex items-center justify-center gap-1.5">
+                    <app-button *ngIf="col.status === 'en_cours'" variant="outline" size="sm" (click)="cloturerCollecte(col)" class="h-7 text-[10px] px-2 text-red-600 hover:bg-red-50">
+                      Clôturer
+                    </app-button>
+                    <span class="text-[10px] text-muted-foreground italic" *ngIf="col.status === 'cloturee'">
+                      Clôturée le {{ col.closedAt | date:'dd/MM/yy à HH:mm' }}
+                    </span>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="filteredCollectes().length === 0">
+                <td colspan="6" class="p-8 text-center text-muted-foreground italic">Aucune collecte active. Cliquez sur "Nouvelle collecte" pour commencer.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </app-card>
+    </app-tabs-content>
+
+    <!-- Content 3: Workflow Validation Fiches -->
+    <app-tabs-content value="fiches" class="mt-4">
+      <!-- Fiches Sub-Tabs for Activity Fiches and Indicator Fiches -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Part A: Fiches d'Activités -->
+        <app-card>
+          <div class="p-4 border-b flex justify-between items-center bg-muted/20">
+            <h3 class="text-sm font-bold flex items-center gap-2">
+              <lucide-icon [img]="FileTextIcon" class="w-4 h-4 text-primary"></lucide-icon>
+              Fiches de Suivi d'Activités
+            </h3>
+          </div>
+
+          <div class="divide-y max-h-[600px] overflow-y-auto">
+            <div *ngFor="let f of filteredFichesSuivi()" class="p-3 hover:bg-muted/10 transition space-y-2">
+              <div class="flex justify-between items-start">
+                <div class="space-y-0.5">
+                  <h4 class="font-bold text-xs text-foreground cursor-pointer hover:underline" (click)="viewFicheDetail(f)">{{ f.activityName }}</h4>
+                  <div class="text-[9px] text-muted-foreground font-mono">{{ f.code }} — Projet: {{ f.projectName }}</div>
+                </div>
+                <app-badge [class]="getStatusBadgeClass(f.status) + ' text-[9px] px-1.5 h-6 rounded border font-medium'">
+                  {{ getStatusLabel(f.status) }}
+                </app-badge>
+              </div>
+
+              <!-- Form/Status metadata info -->
+              <div class="flex flex-wrap items-center justify-between text-[10px] text-muted-foreground">
+                <div>Responsable: <span class="font-semibold text-foreground">{{ f.responsable }}</span></div>
+                <div>Budget: <span class="font-bold text-foreground">{{ formatNumber(f.budgetPrevu) }} FCFA</span></div>
+              </div>
+
+              <!-- Workflow execution progress bar -->
+              <div class="flex items-center gap-2 text-[10px]">
+                <span class="text-muted-foreground">Étape: {{ f.currentStepName }}</span>
+                <app-progress [value]="f.progressPercentage" class="h-1.5 flex-1"></app-progress>
+                <span class="font-mono font-bold">{{ f.progressPercentage }}%</span>
+              </div>
+
+              <!-- Actions based on status -->
+              <div class="flex justify-end gap-1.5 border-t pt-2 mt-2">
+                <app-button variant="ghost" size="icon" class="h-7 w-7 text-primary" (click)="openEditFicheSuivi(f)" *ngIf="f.status === 'brouillon'">
+                  <lucide-icon [img]="EditIcon" class="w-3.5 h-3.5"></lucide-icon>
+                </app-button>
+                <app-button variant="outline" size="sm" class="h-7 text-[10px] px-2" (click)="submitFicheSuivi(f)" *ngIf="f.status === 'brouillon'">
+                  <lucide-icon [img]="SendIcon" class="w-3 h-3 mr-1"></lucide-icon>
+                  Soumettre
+                </app-button>
+                <app-button variant="outline" size="sm" class="h-7 text-[10px] px-2 text-amber-600 border-amber-200 bg-amber-50 hover:bg-amber-100" (click)="validateFicheSuivi(f)" *ngIf="f.status === 'soumis'">
+                  <lucide-icon [img]="CheckIcon" class="w-3 h-3 mr-1"></lucide-icon>
+                  Valider
+                </app-button>
+                <app-button variant="default" size="sm" class="h-7 text-[10px] px-2" (click)="approveFicheSuivi(f)" *ngIf="f.status === 'valide'">
+                  <lucide-icon [img]="AwardIcon" class="w-3 h-3 mr-1"></lucide-icon>
+                  Approuver
+                </app-button>
+                <app-button variant="outline" size="sm" class="h-7 text-[10px] px-2 gap-1" (click)="viewFicheDetail(f)">
+                  <lucide-icon [img]="EyeIcon" class="w-3 h-3"></lucide-icon>
+                  Consulter
+                </app-button>
+              </div>
+            </div>
+            <div *ngIf="filteredFichesSuivi().length === 0" class="p-6 text-center text-muted-foreground italic text-xs">
+              Aucune fiche de suivi d'activité trouvée.
+            </div>
+          </div>
+        </app-card>
+
+        <!-- Part B: Fiches d'Indicateurs -->
+        <app-card>
+          <div class="p-4 border-b flex justify-between items-center bg-muted/20">
+            <h3 class="text-sm font-bold flex items-center gap-2">
+              <lucide-icon [img]="BarChart3Icon" class="w-4 h-4 text-primary"></lucide-icon>
+              Fiches Indicateurs
+            </h3>
+          </div>
+
+          <div class="divide-y max-h-[600px] overflow-y-auto">
+            <div *ngFor="let fi of filteredFichesIndicateurs()" class="p-3 hover:bg-muted/10 transition space-y-2">
+              <div class="flex justify-between items-start">
+                <div class="space-y-0.5">
+                  <h4 class="font-bold text-xs text-foreground">{{ fi.projectName }}</h4>
+                  <div class="text-[9px] text-muted-foreground font-mono">{{ fi.code }}</div>
+                </div>
+                <app-badge [class]="getStatusBadgeClass(fi.status) + ' text-[9px] px-1.5 h-6 rounded border font-medium'">
+                  {{ getStatusLabel(fi.status) }}
+                </app-badge>
+              </div>
+
+              <!-- List of indicator metrics preview -->
+              <div class="space-y-1 bg-muted/30 p-2 rounded border">
+                <div *ngFor="let ind of fi.indicateurs" class="text-[10px] flex justify-between">
+                  <span class="truncate max-w-[200px]">{{ ind.indicateurName }}</span>
+                  <span class="font-bold text-foreground font-mono">{{ ind.currentValue }} / {{ ind.targetValue }} {{ ind.unit }}</span>
+                </div>
+              </div>
+
+              <!-- Actions based on status -->
+              <div class="flex justify-end gap-1.5 border-t pt-2 mt-2">
+                <app-button variant="ghost" size="icon" class="h-7 w-7 text-primary" (click)="openEditFicheIndicateur(fi)" *ngIf="fi.status === 'brouillon'">
+                  <lucide-icon [img]="EditIcon" class="w-3.5 h-3.5"></lucide-icon>
+                </app-button>
+                <app-button variant="outline" size="sm" class="h-7 text-[10px] px-2" (click)="submitFicheIndicateur(fi)" *ngIf="fi.status === 'brouillon'">
+                  <lucide-icon [img]="SendIcon" class="w-3 h-3 mr-1"></lucide-icon>
+                  Soumettre
+                </app-button>
+                <app-button variant="default" size="sm" class="h-7 text-[10px] px-2" (click)="approveFicheIndicateur(fi)" *ngIf="fi.status === 'soumis'">
+                  <lucide-icon [img]="AwardIcon" class="w-3 h-3 mr-1"></lucide-icon>
+                  Approuver
+                </app-button>
+              </div>
+            </div>
+            <div *ngIf="filteredFichesIndicateurs().length === 0" class="p-6 text-center text-muted-foreground italic text-xs">
+              Aucune fiche d'indicateur trouvée.
+            </div>
+          </div>
+        </app-card>
+      </div>
+    </app-tabs-content>
+  </app-tabs>
+
+  <!-- Modal Dialog: Create Collecte -->
+  <div *ngIf="collecteDialogOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+    <div class="bg-background rounded-lg max-w-md w-full border shadow-lg overflow-hidden animate-scale-in text-xs">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 class="font-bold text-sm text-foreground flex items-center gap-1.5">
+          <lucide-icon [img]="PlusIcon" class="w-4 h-4 text-primary"></lucide-icon>
+          Lancer une Nouvelle Collecte
+        </h3>
+        <button (click)="collecteDialogOpen = false" class="p-1 hover:bg-muted rounded">
+          <lucide-icon [img]="XIcon" class="w-4 h-4"></lucide-icon>
+        </button>
+      </div>
+      <div class="p-4 space-y-4">
+        <div class="space-y-1">
+          <label class="font-bold text-muted-foreground">Projet d'intervention *</label>
+          <select [(ngModel)]="collecteFormProject" class="w-full p-2.5 border rounded bg-background text-foreground">
+            <option *ngFor="let p of projectsList()" [value]="p.id">{{ p.name }}</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-muted-foreground">Date de la collecte *</label>
+          <input type="date" [(ngModel)]="collecteFormDate" class="w-full p-2.5 border rounded bg-background text-foreground font-mono" />
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-muted-foreground">Description / Notes additionnelles</label>
+          <textarea [(ngModel)]="collecteFormDescription" rows="2" class="w-full p-2.5 border rounded bg-background text-foreground" placeholder="Saisir les observations ou la période cible..."></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 p-4 border-t bg-muted/10">
+        <app-button variant="outline" size="sm" (click)="collecteDialogOpen = false">Annuler</app-button>
+        <app-button size="sm" (click)="handleCreateCollecte()">Enregistrer</app-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Edit Fiche d'Activité -->
+  <div *ngIf="ficheSuiviFormOpen && editingFicheSuivi" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+    <div class="bg-background rounded-lg max-w-2xl w-full border shadow-lg overflow-hidden animate-scale-in text-xs">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 class="font-bold text-sm text-foreground flex items-center gap-1.5">
+          <lucide-icon [img]="EditIcon" class="w-4 h-4 text-primary"></lucide-icon>
+          Saisie Réalisations Activité — Brouillon
+        </h3>
+        <button (click)="ficheSuiviFormOpen = false" class="p-1 hover:bg-muted rounded">
+          <lucide-icon [img]="XIcon" class="w-4 h-4"></lucide-icon>
+        </button>
+      </div>
+      <div class="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="bg-muted/30 p-3 rounded border space-y-1">
+          <div class="font-bold text-sm text-foreground">{{ editingFicheSuivi.activityName }}</div>
+          <div class="text-[10px] text-muted-foreground">Projet: {{ editingFicheSuivi.projectName }} | Code: {{ editingFicheSuivi.code }}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1">
+            <label class="font-bold text-muted-foreground">Dépenses Cumulées Réalisées (FCFA)</label>
+            <input type="number" [(ngModel)]="editingFicheSuivi.depensesCumulees" class="w-full p-2.5 border rounded bg-background text-foreground font-mono text-right" />
+            <p class="text-[9px] text-muted-foreground">Budget prévu de l'activité: {{ formatNumber(editingFicheSuivi.budgetPrevu) }} FCFA</p>
+          </div>
+
+          <div class="space-y-1">
+            <label class="font-bold text-muted-foreground">Étape Actuelle du Workflow</label>
+            <select [ngModel]="editingFicheSuivi.currentStepId" (ngModelChange)="onStepChange($event)" class="w-full p-2.5 border rounded bg-background text-foreground">
+              <option *ngFor="let s of getWorkflowSteps(editingFicheSuivi.workflowId || 'sensibilisation')" [value]="s.id">{{ s.name }} (Étape {{ s.order }})</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Livrables Targets -->
+        <div class="space-y-2 border-t pt-3">
+          <h4 class="font-bold text-muted-foreground text-[10px] uppercase">Indicateurs de Production (Livrables)</h4>
+          <div class="space-y-2">
+            <div *ngFor="let del of editingFicheSuivi.livrables" class="grid grid-cols-12 gap-3 items-center bg-muted/20 p-2.5 rounded border">
+              <div class="col-span-6 font-medium">{{ del.livrableName }}</div>
+              <div class="col-span-6 flex items-center justify-end gap-2 font-mono">
+                <input type="number" [(ngModel)]="del.currentValue" class="w-20 p-1 border rounded bg-background text-center" />
+                <span class="text-muted-foreground">/</span>
+                <span class="font-bold w-12 text-right">{{ del.targetValue }}</span>
+                <span class="text-[10px] text-muted-foreground font-sans">{{ del.unit }}</span>
+              </div>
+            </div>
+            <div *ngIf="!editingFicheSuivi.livrables || editingFicheSuivi.livrables.length === 0" class="text-[10px] text-muted-foreground italic text-center py-2">
+              Aucun livrable à saisir pour cette activité.
+            </div>
+          </div>
+        </div>
+
+        <!-- Points Critiques Section -->
+        <div class="space-y-2 border-t pt-3">
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-muted-foreground text-[10px] uppercase">Points Critiques / Alertes de Suivi</h4>
+            <app-button variant="outline" size="sm" class="h-6 text-[10px] gap-1 px-1.5" (click)="addPointCritique()">
+              <lucide-icon [img]="PlusIcon" class="w-3 h-3"></lucide-icon>
+              Ajouter alerte
+            </app-button>
+          </div>
+          <div class="space-y-2">
+            <div *ngFor="let pc of editingFicheSuivi.pointsCritiques; let i = index" class="border rounded p-3 space-y-2 bg-muted/10 relative">
+              <button (click)="removePointCritique(i)" class="absolute top-2 right-2 p-1 hover:bg-red-50 text-red-600 rounded">
+                <lucide-icon [img]="TrashIcon" class="w-3.5 h-3.5"></lucide-icon>
+              </button>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="col-span-2 space-y-1">
+                  <label class="font-bold text-muted-foreground">Titre de l'alerte *</label>
+                  <input type="text" [(ngModel)]="pc.titre" class="w-full p-2 border rounded bg-background text-foreground" placeholder="Titre de l'alerte..." />
+                </div>
+                <div class="space-y-1">
+                  <label class="font-bold text-muted-foreground">Gravité *</label>
+                  <select [(ngModel)]="pc.niveau" class="w-full p-2 border rounded bg-background text-foreground">
+                    <option value="info">Information</option>
+                    <option value="attention">Attention</option>
+                    <option value="critique">Critique</option>
+                  </select>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <label class="font-bold text-muted-foreground">Description de la contrainte</label>
+                <textarea [(ngModel)]="pc.description" rows="2" class="w-full p-2 border rounded bg-background text-foreground" placeholder="Détails de l'alerte..."></textarea>
+              </div>
+            </div>
+            <div *ngIf="!editingFicheSuivi.pointsCritiques || editingFicheSuivi.pointsCritiques.length === 0" class="text-[10px] text-muted-foreground italic text-center py-1">
+              Aucun point critique actif.
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions de Suivi Section -->
+        <div class="space-y-2 border-t pt-3">
+          <div class="flex justify-between items-center">
+            <h4 class="font-bold text-muted-foreground text-[10px] uppercase">Plan d'actions de Suivi</h4>
+            <app-button variant="outline" size="sm" class="h-6 text-[10px] gap-1 px-1.5" (click)="addActionSuivi()">
+              <lucide-icon [img]="PlusIcon" class="w-3 h-3"></lucide-icon>
+              Nouvelle action
+            </app-button>
+          </div>
+          <div class="space-y-2">
+            <div *ngFor="let ac of editingFicheSuivi.actionsSuivi; let i = index" class="border rounded p-3 space-y-2 bg-muted/10 relative">
+              <button (click)="removeActionSuivi(i)" class="absolute top-2 right-2 p-1 hover:bg-red-50 text-red-600 rounded">
+                <lucide-icon [img]="TrashIcon" class="w-3.5 h-3.5"></lucide-icon>
+              </button>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="col-span-2 space-y-1">
+                  <label class="font-bold text-muted-foreground">Titre de l'action *</label>
+                  <input type="text" [(ngModel)]="ac.titre" class="w-full p-2 border rounded bg-background text-foreground" placeholder="Titre de l'action..." />
+                </div>
+                <div class="space-y-1">
+                  <label class="font-bold text-muted-foreground">Responsable</label>
+                  <input type="text" [(ngModel)]="ac.responsable" class="w-full p-2 border rounded bg-background text-foreground" />
+                </div>
+                <div class="space-y-1">
+                  <label class="font-bold text-muted-foreground">Échéance</label>
+                  <input type="date" [(ngModel)]="ac.echeance" class="w-full p-2 border rounded bg-background text-foreground font-mono" />
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!editingFicheSuivi.actionsSuivi || editingFicheSuivi.actionsSuivi.length === 0" class="text-[10px] text-muted-foreground italic text-center py-1">
+              Aucune action planifiée.
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-1 border-t pt-3">
+          <label class="font-bold text-muted-foreground">Observations Générales S&E</label>
+          <textarea [(ngModel)]="editingFicheSuivi.observations" rows="2" class="w-full p-2.5 border rounded bg-background text-foreground" placeholder="Saisir les remarques sur la collecte..."></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 p-4 border-t bg-muted/10">
+        <app-button variant="outline" size="sm" (click)="ficheSuiviFormOpen = false">Annuler</app-button>
+        <app-button size="sm" (click)="saveFicheSuiviEdit()">Enregistrer les modifications</app-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Edit Fiche Indicateurs -->
+  <div *ngIf="ficheIndicateurFormOpen && editingFicheIndicateur" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+    <div class="bg-background rounded-lg max-w-xl w-full border shadow-lg overflow-hidden animate-scale-in text-xs">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 class="font-bold text-sm text-foreground flex items-center gap-1.5">
+          <lucide-icon [img]="EditIcon" class="w-4 h-4 text-primary"></lucide-icon>
+          Saisie Réalisations Indicateurs Projet
+        </h3>
+        <button (click)="ficheIndicateurFormOpen = false" class="p-1 hover:bg-muted rounded">
+          <lucide-icon [img]="XIcon" class="w-4 h-4"></lucide-icon>
+        </button>
+      </div>
+      <div class="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="bg-muted/30 p-3 rounded border space-y-0.5">
+          <div class="font-bold text-sm text-foreground">{{ editingFicheIndicateur.projectName }}</div>
+          <div class="text-[10px] text-muted-foreground">Code fiche: {{ editingFicheIndicateur.code }}</div>
+        </div>
+
+        <div class="space-y-3">
+          <div *ngFor="let ind of editingFicheIndicateur.indicateurs" class="border rounded p-3 space-y-2 bg-muted/10">
+            <div class="font-medium text-foreground">
+              <span class="font-mono text-muted-foreground mr-1">[{{ ind.indicateurCode }}]</span>
+              {{ ind.indicateurName }}
+            </div>
+            <div class="grid grid-cols-3 gap-3 font-mono text-center">
+              <div>
+                <span class="text-[9px] text-muted-foreground block font-sans">Baseline</span>
+                <span class="font-bold text-[11px]">{{ ind.baselineValue }}</span>
+              </div>
+              <div>
+                <span class="text-[9px] text-muted-foreground block font-sans">Cible</span>
+                <span class="font-bold text-[11px]">{{ ind.targetValue }}</span>
+              </div>
+              <div class="flex items-center justify-center gap-1 font-sans">
+                <input type="number" [(ngModel)]="ind.currentValue" class="w-16 p-1 border rounded bg-background font-mono text-center" />
+                <span class="text-[10px] text-muted-foreground">{{ ind.unit }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 p-4 border-t bg-muted/10">
+        <app-button variant="outline" size="sm" (click)="ficheIndicateurFormOpen = false">Annuler</app-button>
+        <app-button size="sm" (click)="saveFicheIndicateurEdit()">Enregistrer</app-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Dialog: Fiche Detail View -->
+  <div *ngIf="ficheDetailOpen && selectedFicheSuivi() as f" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+    <div class="bg-background rounded-lg max-w-lg w-full border shadow-lg overflow-hidden animate-scale-in text-xs">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h3 class="font-bold text-sm text-foreground flex items-center gap-1.5">
+          <lucide-icon [img]="FileTextIcon" class="w-4 h-4 text-primary"></lucide-icon>
+          Consulter Fiche de Suivi
+        </h3>
+        <button (click)="ficheDetailOpen = false" class="p-1 hover:bg-muted rounded">
+          <lucide-icon [img]="XIcon" class="w-4 h-4"></lucide-icon>
+        </button>
+      </div>
+      <div class="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="flex justify-between items-start border-b pb-2">
+          <div>
+            <h4 class="font-bold text-sm text-foreground">{{ f.activityName }}</h4>
+            <p class="text-[10px] text-muted-foreground mt-0.5">Code: {{ f.code }} | Projet: {{ f.projectName }}</p>
+          </div>
+          <app-badge [class]="getStatusBadgeClass(f.status) + ' text-[9px] px-1.5 py-0.5 rounded font-bold'">
+            {{ getStatusLabel(f.status) }}
+          </app-badge>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 border-b pb-2">
+          <div>
+            <span class="text-muted-foreground block font-medium">Responsable</span>
+            <span class="font-bold text-foreground">{{ f.responsable }}</span>
+          </div>
+          <div>
+            <span class="text-muted-foreground block font-medium">Date de Collecte</span>
+            <span class="font-bold text-foreground font-mono">{{ f.dateCollecte | date:'dd/MM/yyyy' }}</span>
+          </div>
+        </div>
+
+        <!-- Budget progress -->
+        <div class="border-b pb-3 space-y-1">
+          <div class="flex justify-between text-muted-foreground font-medium">
+            <span>Suivi Financier:</span>
+            <span class="font-bold text-foreground">{{ formatNumber(f.depensesCumulees) }} / {{ formatNumber(f.budgetPrevu) }} FCFA</span>
+          </div>
+          <app-progress [value]="f.budgetPrevu > 0 ? (f.depensesCumulees / f.budgetPrevu * 100) : 0" class="h-1.5 bg-emerald-50" indicatorClass="bg-emerald-600"></app-progress>
+        </div>
+
+        <!-- Physical progress deliverables -->
+        <div class="border-b pb-3 space-y-2">
+          <span class="text-muted-foreground block font-semibold uppercase text-[10px]">Production Réalisée (Livrables)</span>
+          <div class="space-y-1.5">
+            <div *ngFor="let del of f.livrables" class="flex justify-between items-center bg-muted/20 p-2 rounded">
+              <span class="font-medium text-foreground">{{ del.livrableName }}</span>
+              <span class="font-bold font-mono text-primary">{{ del.currentValue }} / {{ del.targetValue }} <span class="font-normal text-muted-foreground text-[10px] font-sans">{{ del.unit }}</span></span>
+            </div>
+            <div *ngIf="!f.livrables || f.livrables.length === 0" class="text-[10px] text-muted-foreground italic text-center">Aucun livrable défini.</div>
+          </div>
+        </div>
+
+        <!-- Point critiques alerts list -->
+        <div class="border-b pb-3 space-y-2">
+          <span class="text-muted-foreground block font-semibold uppercase text-[10px]">Points Critiques & Alertes</span>
+          <div class="space-y-1.5">
+            <div *ngFor="let pc of f.pointsCritiques" class="p-2.5 rounded border border-amber-200 bg-amber-50/50 flex gap-2">
+              <lucide-icon [img]="AlertTriangleIcon" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></lucide-icon>
+              <div>
+                <div class="font-bold text-amber-800 text-[11px]">{{ pc.titre }}</div>
+                <div class="text-[10px] text-amber-700/90 leading-relaxed mt-0.5">{{ pc.description }}</div>
+              </div>
+            </div>
+            <div *ngIf="!f.pointsCritiques || f.pointsCritiques.length === 0" class="text-[10px] text-muted-foreground italic text-center">Aucun point critique actif signalé.</div>
+          </div>
+        </div>
+
+        <!-- Action plan list -->
+        <div class="space-y-2">
+          <span class="text-muted-foreground block font-semibold uppercase text-[10px]">Plan d'actions de Suivi</span>
+          <div class="space-y-1.5">
+            <div *ngFor="let ac of f.actionsSuivi" class="p-2.5 rounded border flex justify-between items-center bg-muted/20">
+              <div>
+                <div class="font-bold text-foreground text-[11px]">{{ ac.titre }}</div>
+                <div class="text-[10px] text-muted-foreground mt-0.5">Responsable: {{ ac.responsable }} | Échéance: {{ ac.echeance | date:'dd/MM/yy' }}</div>
+              </div>
+              <app-badge [variant]="ac.statut === 'termine' ? 'default' : 'secondary'" class="text-[9px] font-medium font-sans">
+                {{ ac.statut === 'termine' ? 'Terminée' : 'À faire' }}
+              </app-badge>
+            </div>
+            <div *ngIf="!f.actionsSuivi || f.actionsSuivi.length === 0" class="text-[10px] text-muted-foreground italic text-center">Aucune action de suivi planifiée.</div>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end p-4 border-t bg-muted/10">
+        <app-button size="sm" (click)="ficheDetailOpen = false">Fermer</app-button>
+      </div>
+    </div>
+  </div>
+</div>

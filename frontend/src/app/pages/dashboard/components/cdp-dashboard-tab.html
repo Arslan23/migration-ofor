@@ -1,0 +1,221 @@
+<div class="space-y-4">
+    <!-- Header with export buttons -->
+    <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-muted-foreground">Suivi CDP - {{ evaluationYear }}</h2>
+        <div class="flex items-center gap-2">
+            <app-button variant="outline" size="sm" class="h-7 text-xs gap-1">
+                <lucide-icon [img]="FileSpreadsheetIcon" class="w-3.5 h-3.5"></lucide-icon> Excel
+            </app-button>
+            <app-button size="sm" class="h-7 text-xs gap-1">
+                <lucide-icon [img]="DownloadIcon" class="w-3.5 h-3.5"></lucide-icon> PDF
+            </app-button>
+        </div>
+    </div>
+
+    <!-- KPIs: 5 standardized cards -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+        <app-card>
+            <div card-content class="p-3 flex items-center gap-2">
+                <div class="p-2 rounded-lg bg-primary/10">
+                    <lucide-icon [img]="TargetIcon" class="w-4 h-4 text-primary"></lucide-icon>
+                </div>
+                <div>
+                    <p class="text-[10px] text-muted-foreground">Indicateurs</p>
+                    <p class="text-base font-bold">{{ indicatorStats().total }}</p>
+                </div>
+            </div>
+        </app-card>
+
+        <app-card>
+            <div card-content class="p-3 flex items-center gap-2">
+                <div
+                    [class]="cn('p-2 rounded-lg', indicatorStats().avgPerformance >= 80 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-amber-100 dark:bg-amber-900/30')">
+                    <lucide-icon [img]="TrendingUpIcon"
+                        [class]="cn('w-4 h-4', indicatorStats().avgPerformance >= 80 ? 'text-green-600' : 'text-amber-600')"></lucide-icon>
+                </div>
+                <div>
+                    <p class="text-[10px] text-muted-foreground">Performance moy.</p>
+                    <p [class]="cn('text-base font-bold', getPerfColor(indicatorStats().avgPerformance))">
+                        {{ indicatorStats().avgPerformance }}%
+                    </p>
+                </div>
+            </div>
+        </app-card>
+
+        <app-card>
+            <div card-content class="p-3 flex items-center gap-2">
+                <div class="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                    <lucide-icon [img]="CheckCircle2Icon" class="w-4 h-4 text-green-600"></lucide-icon>
+                </div>
+                <div>
+                    <p class="text-[10px] text-muted-foreground">Atteints</p>
+                    <p class="text-base font-bold text-green-600">{{ indicatorStats().atteints }}</p>
+                </div>
+            </div>
+        </app-card>
+
+        <app-card>
+            <div card-content class="p-3 flex items-center gap-2">
+                <div class="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                    <lucide-icon [img]="ActivityIcon" class="w-4 h-4 text-amber-600"></lucide-icon>
+                </div>
+                <div>
+                    <p class="text-[10px] text-muted-foreground">En progression</p>
+                    <p class="text-base font-bold text-amber-600">{{ indicatorStats().enProgres }}</p>
+                </div>
+            </div>
+        </app-card>
+
+        <app-card>
+            <div card-content class="p-3 flex items-center gap-2">
+                <div class="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
+                    <lucide-icon [img]="AlertTriangleIcon" class="w-4 h-4 text-red-600"></lucide-icon>
+                </div>
+                <div>
+                    <p class="text-[10px] text-muted-foreground">En retard</p>
+                    <p class="text-base font-bold text-red-600">{{ indicatorStats().enRetard }}</p>
+                </div>
+            </div>
+        </app-card>
+    </div>
+
+    <!-- Charts row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <app-card>
+            <div card-header class="py-3">
+                <h3 card-title class="text-sm">Performance par catégorie</h3>
+            </div>
+            <div card-content class="h-[220px]">
+                <canvas #radarChartCanvas></canvas>
+            </div>
+        </app-card>
+
+        <app-card>
+            <div card-header class="py-3">
+                <h3 card-title class="text-sm">{{ pieChartTitle() }}</h3>
+            </div>
+            <div card-content class="h-[220px]">
+                <canvas #pieChartCanvas></canvas>
+            </div>
+        </app-card>
+    </div>
+
+    <!-- Hierarchical Table -->
+    <app-card>
+        <div card-header class="py-3 px-4">
+            <h3 card-title class="text-sm">Indicateurs par catégorie et composante - {{ evaluationYear }}</h3>
+        </div>
+        <div card-content class="p-0">
+            <app-accordion type="multiple" class="w-full">
+                <app-accordion-item *ngFor="let cat of groupedPerformance()" [value]="cat.id" #catItem
+                    class="border-b last:border-0">
+                    <!-- Category Header -->
+                    <app-accordion-trigger [hideIcon]="true" class="w-full"
+                        buttonClass="px-4 py-2 bg-muted/50 hover:bg-muted/70 transition-colors w-full">
+                        <div class="flex items-center justify-between w-full">
+                            <div class="flex items-center gap-2">
+                                <lucide-icon [img]="ChevronRightIcon"
+                                    [class]="cn('w-4 h-4 transition-transform duration-200', catItem.isOpen ? 'rotate-90' : '')"></lucide-icon>
+                                <app-badge variant="outline" class="font-mono text-[10px] h-4 px-1.5">{{ cat.code
+                                    }}</app-badge>
+                                <span class="text-sm font-medium">{{ cat.name }}</span>
+                                <span class="text-xs text-muted-foreground">({{ cat.totalIndicators }}
+                                    indicateurs)</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="hidden md:flex items-center gap-1.5">
+                                    <span class="text-[10px] text-muted-foreground">Atteints:</span>
+                                    <app-badge
+                                        class="bg-green-100 text-green-700 text-[10px] hover:bg-green-100 h-4 px-1.5 border-0">{{
+                                        cat.atteints }}</app-badge>
+                                </div>
+                                <div class="hidden md:flex items-center gap-1.5">
+                                    <span class="text-[10px] text-muted-foreground">Retard:</span>
+                                    <app-badge
+                                        class="bg-red-100 text-red-700 text-[10px] hover:bg-red-100 h-4 px-1.5 border-0">{{
+                                        cat.enRetard }}</app-badge>
+                                </div>
+                                <div class="w-24 flex items-center gap-1.5">
+                                    <app-progress [value]="cat.performance" class="h-1.5 flex-1"></app-progress>
+                                    <span
+                                        [class]="cn('text-xs font-bold w-10 text-right', getPerfColor(cat.performance))">{{
+                                        cat.performance }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </app-accordion-trigger>
+
+                    <app-accordion-content class="p-0" innerClass="pb-0">
+                        <div *ngFor="let comp of cat.components" class="border-t">
+                            <!-- Component Header -->
+                            <div class="flex items-center justify-between px-4 py-1.5 bg-muted/30 pl-10">
+                                <div class="flex items-center gap-2">
+                                    <app-badge variant="secondary" class="font-mono text-[9px] h-4 px-1 border-0">{{
+                                        comp.code }}</app-badge>
+                                    <span class="text-xs font-medium">{{ comp.name }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] text-muted-foreground">{{ comp.indicators.length }}
+                                        ind.</span>
+                                    <div class="w-16 flex items-center gap-1">
+                                        <app-progress [value]="comp.performance" class="h-1 flex-1"></app-progress>
+                                        <span
+                                            [class]="cn('text-[10px] font-bold w-8 text-right', getPerfColor(comp.performance))">{{
+                                            comp.performance }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Indicators Table -->
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="border-b bg-background">
+                                        <th
+                                            class="text-left py-1 px-4 pl-14 font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
+                                            Indicateur</th>
+                                        <th
+                                            class="text-center py-1 px-2 font-medium text-[10px] text-muted-foreground w-16 uppercase tracking-wider">
+                                            Unité</th>
+                                        <th
+                                            class="text-right py-1 px-2 font-medium text-[10px] text-muted-foreground w-16 uppercase tracking-wider">
+                                            Cible</th>
+                                        <th
+                                            class="text-right py-1 px-2 font-medium text-[10px] text-muted-foreground w-16 uppercase tracking-wider">
+                                            Réalisé</th>
+                                        <th
+                                            class="text-right py-1 px-2 font-medium text-[10px] text-muted-foreground w-20 uppercase tracking-wider">
+                                            Performance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let ind of comp.indicators"
+                                        class="border-b border-muted/20 hover:bg-muted/30 last:border-0 transition-colors">
+                                        <td class="py-1 px-4 pl-14 text-[11px] leading-tight">
+                                            <span class="font-mono text-muted-foreground mr-1 opacity-70">{{
+                                                ind.indicateurCode }}</span>
+                                            {{ ind.indicateurName }}
+                                        </td>
+                                        <td class="py-1 px-2 text-center text-[10px] text-muted-foreground">{{ ind.unit
+                                            || '-' }}</td>
+                                        <td class="py-1 px-2 text-right text-[11px]">{{ ind.targetValue |
+                                            number:'1.0-0':'fr-FR' }}</td>
+                                        <td class="py-1 px-2 text-right text-[11px]">
+                                            {{ ind.currentValue !== undefined ? (ind.currentValue |
+                                            number:'1.0-0':'fr-FR') : '-' }}
+                                        </td>
+                                        <td class="py-1 px-2 text-right">
+                                            <span
+                                                [class]="cn('font-bold text-[11px]', getPerfColor(ind.performanceRate || 0))">
+                                                {{ ind.performanceRate || 0 }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </app-accordion-content>
+                </app-accordion-item>
+            </app-accordion>
+        </div>
+    </app-card>
+</div>

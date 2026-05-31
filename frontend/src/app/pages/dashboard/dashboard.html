@@ -1,0 +1,231 @@
+<app-tabs [value]="mainTab" defaultValue="global" (valueChange)="mainTab = $event" class="space-y-3 animate-fade-in block">
+  <div class="flex flex-col gap-2">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <app-tabs-list class="h-9">
+        <app-tabs-trigger value="global" class="text-xs gap-1">
+          <lucide-icon [img]="icons.BarChart3" class="w-3.5 h-3.5"></lucide-icon>
+          Situation OFOR
+        </app-tabs-trigger>
+        <app-tabs-trigger value="avancement" class="text-xs gap-1">
+          <lucide-icon [img]="icons.FolderKanban" class="w-3.5 h-3.5"></lucide-icon>
+          Avancement des projets
+        </app-tabs-trigger>
+        <app-tabs-trigger value="pta" class="text-xs gap-1">
+          <lucide-icon [img]="icons.Calendar" class="w-3.5 h-3.5"></lucide-icon>
+          Suivi PTA
+        </app-tabs-trigger>
+        <app-tabs-trigger value="cdp" class="text-xs gap-1">
+          <lucide-icon [img]="icons.Target" class="w-3.5 h-3.5"></lucide-icon>
+          Suivi CDP
+        </app-tabs-trigger>
+      </app-tabs-list>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <button (click)="printReport()" class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border bg-background hover:bg-accent transition-colors">
+          <lucide-icon [img]="icons.Printer" class="w-3.5 h-3.5"></lucide-icon>
+          Imprimer
+        </button>
+        <button (click)="exportExcel()" class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md border bg-background hover:bg-accent transition-colors">
+          <lucide-icon [img]="icons.FileSpreadsheet" class="w-3.5 h-3.5"></lucide-icon>
+          Excel
+        </button>
+        <button (click)="exportPDF()" class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm">
+          <lucide-icon [img]="icons.Download" class="w-3.5 h-3.5"></lucide-icon>
+          PDF
+        </button>
+        <div class="h-5 w-px bg-border mx-1 hidden sm:block"></div>
+        <button (click)="exportConsolidatedExcel()" class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+          <lucide-icon [img]="icons.Layers" class="w-3.5 h-3.5"></lucide-icon>
+          Excel consolidé
+        </button>
+        <button (click)="exportConsolidatedPDF()" class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
+          <lucide-icon [img]="icons.Layers" class="w-3.5 h-3.5"></lucide-icon>
+          PDF consolidé
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="mainTab !== 'global'" class="rounded-xl border bg-card text-card-foreground shadow-sm py-2">
+      <div class="flex flex-wrap items-center gap-2 px-3">
+        <div class="flex items-center gap-1.5">
+          <lucide-icon [img]="icons.Filter" class="w-3.5 h-3.5 text-muted-foreground"></lucide-icon>
+          <span class="text-xs text-muted-foreground">Filtres:</span>
+        </div>
+
+        <ng-container *ngIf="mainTab === 'avancement'">
+          <app-select [value]="selectedYear()" (valueChange)="selectedYear.set($event)">
+            <app-select-trigger class="w-20 h-7 text-xs">
+              <app-select-value placeholder="Année"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item *ngFor="let year of years" [value]="year">{{ year }}</app-select-item>
+            </app-select-content>
+          </app-select>
+
+          <app-select [value]="selectedRegion()" (valueChange)="selectedRegion.set($event)">
+            <app-select-trigger class="w-32 h-7 text-xs">
+              <app-select-value placeholder="Région"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item value="all">Toutes régions</app-select-item>
+              <app-select-item *ngFor="let region of regions()" [value]="region">{{ region }}</app-select-item>
+            </app-select-content>
+          </app-select>
+
+          <app-select [value]="selectedServiceId()" (valueChange)="onServiceChange($event)">
+            <app-select-trigger class="w-44 h-7 text-xs">
+              <app-select-value placeholder="Service"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item value="all">Tous services</app-select-item>
+              <app-select-item *ngFor="let service of services" [value]="service.id">{{ service.code }} - {{ service.nom }}</app-select-item>
+            </app-select-content>
+          </app-select>
+
+          <app-select [value]="selectedProjectId()" (valueChange)="onProjectChange($event)">
+            <app-select-trigger class="w-40 h-7 text-xs">
+              <app-select-value placeholder="Projet"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item value="all">Tous projets</app-select-item>
+              <app-select-item *ngFor="let project of availableProjects()" [value]="project.id">{{ project.name }}</app-select-item>
+            </app-select-content>
+          </app-select>
+        </ng-container>
+
+        <ng-container *ngIf="mainTab === 'pta'">
+          <app-select [value]="selectedPTAId()" (valueChange)="selectedPTAId.set($event)">
+            <app-select-trigger class="w-48 h-7 text-xs">
+              <app-select-value placeholder="PTA"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item *ngFor="let pta of ptaList()" [value]="pta.id">{{ pta.code }} - {{ pta.name }}</app-select-item>
+            </app-select-content>
+          </app-select>
+
+          <app-select [value]="selectedPeriod()" (valueChange)="selectedPeriod.set($event)">
+            <app-select-trigger class="w-24 h-7 text-xs">
+              <app-select-value placeholder="Période"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item value="annuel">Annuel</app-select-item>
+              <app-select-item value="cumul">Cumulé</app-select-item>
+              <app-select-item value="T1">T1</app-select-item>
+              <app-select-item value="T2">T2</app-select-item>
+              <app-select-item value="T3">T3</app-select-item>
+              <app-select-item value="T4">T4</app-select-item>
+            </app-select-content>
+          </app-select>
+
+          <app-select [value]="selectedServiceId()" (valueChange)="onServiceChange($event)">
+            <app-select-trigger class="w-44 h-7 text-xs">
+              <app-select-value placeholder="Service"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item value="all">Tous services</app-select-item>
+              <app-select-item *ngFor="let service of services" [value]="service.id">{{ service.code }} - {{ service.nom }}</app-select-item>
+            </app-select-content>
+          </app-select>
+
+          <app-select [value]="selectedProjectId()" (valueChange)="onProjectChange($event)">
+            <app-select-trigger class="w-40 h-7 text-xs">
+              <app-select-value placeholder="Projet"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item value="all">Tous projets</app-select-item>
+              <app-select-item *ngFor="let project of availableProjects()" [value]="project.id">{{ project.name }}</app-select-item>
+            </app-select-content>
+          </app-select>
+
+          <app-select [value]="selectedOperationId()" (valueChange)="onOperationChange($event)">
+            <app-select-trigger class="w-40 h-7 text-xs">
+              <app-select-value placeholder="Opération"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item value="all">Toutes opérations</app-select-item>
+              <app-select-item *ngFor="let operation of ptaOperations()" [value]="operation.id">{{ operation.name }}</app-select-item>
+            </app-select-content>
+          </app-select>
+
+          <app-select [value]="selectedRegion()" (valueChange)="selectedRegion.set($event)">
+            <app-select-trigger class="w-32 h-7 text-xs">
+              <app-select-value placeholder="Région"></app-select-value>
+            </app-select-trigger>
+            <app-select-content>
+              <app-select-item value="all">Toutes régions</app-select-item>
+              <app-select-item *ngFor="let region of regions()" [value]="region">{{ region }}</app-select-item>
+            </app-select-content>
+          </app-select>
+        </ng-container>
+
+        <ng-container *ngIf="mainTab === 'cdp'">
+          <span class="text-xs text-muted-foreground italic">Les filtres sont disponibles ci-dessous</span>
+        </ng-container>
+
+        <button (click)="resetFilters()" class="text-xs text-primary hover:underline ml-auto">
+          Réinitialiser
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <app-tabs-content value="global" class="space-y-3">
+    <app-global-ofor-tab></app-global-ofor-tab>
+  </app-tabs-content>
+
+  <app-tabs-content value="avancement" class="space-y-6">
+    <h2 class="text-sm font-semibold text-muted-foreground uppercase tracking-tight">Performance des projets</h2>
+
+    <div class="grid gap-3 grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
+      <app-stat-card title="Projets" [value]="totalProjects()" [iconName]="icons.FolderKanban" size="sm"></app-stat-card>
+      <app-stat-card title="Délai consommé" [value]="delayConsumed() + '%'" [iconName]="icons.Clock" size="sm" class="text-orange-500"></app-stat-card>
+      <app-stat-card title="Exéc. budget" [value]="budgetExecution() + '%'" [iconName]="icons.Wallet" size="sm" class="text-blue-500"></app-stat-card>
+      <app-stat-card title="Avanc. activités" [value]="activityProgress() + '%'" [iconName]="icons.Activity" size="sm" class="text-green-500"></app-stat-card>
+      <app-stat-card title="Avanc. livrables" [value]="deliverableProgress() + '%'" [iconName]="icons.Package" size="sm" class="text-purple-500"></app-stat-card>
+      <app-stat-card title="Total livrables" [value]="totalDeliverablesCount()" [iconName]="icons.LayoutGrid" size="sm" class="text-emerald-500"></app-stat-card>
+      <app-stat-card title="Livrables atteints" [value]="achievedDeliverablesCount()" [iconName]="icons.CheckCircle2" size="sm" class="text-green-600"></app-stat-card>
+      <app-stat-card title="Projets retard" [value]="delayedProjects()" [iconName]="icons.AlertTriangle" size="sm" class="text-red-500"></app-stat-card>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-7">
+      <div class="col-span-4 lg:col-span-5">
+        <app-comparison-chart [projects]="filteredProjects()"></app-comparison-chart>
+      </div>
+      <div class="col-span-4 lg:col-span-2">
+        <app-global-averages-chart [data]="{
+          delay: delayConsumed(),
+          budget: budgetExecution(),
+          activities: activityProgress(),
+          deliverables: deliverableProgress()
+        }"></app-global-averages-chart>
+      </div>
+    </div>
+
+    <app-project-details-table [projects]="filteredProjects()"></app-project-details-table>
+  </app-tabs-content>
+
+  <app-tabs-content value="pta">
+    <app-pta-dashboard-tab
+      *ngIf="selectedPTA()"
+      [pta]="selectedPTA()!"
+      [selectedPeriod]="selectedPeriod()"
+      [selectedProjectId]="selectedProjectId()"
+      [selectedServiceId]="selectedServiceId()"
+      [selectedOperationId]="selectedOperationId()">
+    </app-pta-dashboard-tab>
+  </app-tabs-content>
+
+  <app-tabs-content value="cdp">
+    <app-cdp-dashboard-tab
+      *ngIf="selectedCDP()"
+      [cdp]="selectedCDP()!"
+      [evaluationYear]="selectedEvalYear()"
+      [selectedCategoryId]="selectedCDPCategory()"
+      [selectedComponentId]="selectedCDPComponent()"
+      [evaluations]="cdpEvaluations()"
+      [categories]="cdpCategories()"
+      [composantes]="cdpComposantes()"
+      [fichesSuivi]="cdpFiches()">
+    </app-cdp-dashboard-tab>
+  </app-tabs-content>
+</app-tabs>

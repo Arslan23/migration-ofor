@@ -1,0 +1,25 @@
+<div class="bg-card rounded-xl border border-border p-4 h-full flex flex-col">
+    <div class="flex items-center justify-between mb-2">
+        <div>
+            <h3 class="font-heading font-semibold text-base">Répartition du budget</h3>
+            <p class="text-xs text-muted-foreground">Par catégorie d'activité</p>
+        </div>
+        <app-badge *ngIf="filterProjectId !== 'all'" variant="outline" class="text-[10px]">Filtré</app-badge>
+    </div>
+
+    <div class="flex-1 min-h-[200px] relative">
+        <div *ngIf="totalBudget === 0"
+            class="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
+            Aucune donnée disponible
+        </div>
+        <canvas baseChart [data]="chartData" [options]="chartOptions" [type]="'pie'">
+        </canvas>
+    </div>
+
+    <div class="mt-2 pt-2 border-t border-border">
+        <div class="flex items-center justify-between text-xs">
+            <span class="text-muted-foreground">Budget total</span>
+            <span class="font-semibold text-foreground">{{ formatBudget(totalBudget) }} FCFA</span>
+        </div>
+    </div>
+</div>

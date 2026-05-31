@@ -1,0 +1,60 @@
+<div [className]="computedClass">
+    <!-- Background decoration (only for default size) -->
+    <div *ngIf="size !== 'sm'"
+        class="absolute top-0 right-0 w-24 h-24 rounded-full opacity-10 -translate-y-1/2 translate-x-1/2" [ngClass]="{
+      'bg-primary': variant === 'default',
+      'bg-white': variant === 'primary' || variant === 'secondary'
+    }"></div>
+
+    <div class="relative">
+        <div class="flex items-center" [ngClass]="size === 'sm' ? 'gap-2.5' : 'justify-between items-start'">
+            <!-- Compact Layout (sm) -->
+            <ng-container *ngIf="size === 'sm'">
+                <div class="p-2 rounded-lg bg-current/10 shrink-0">
+                    <lucide-icon [img]="iconName" class="w-4 h-4"></lucide-icon>
+                </div>
+                <div class="min-w-0">
+                    <p
+                        class="text-[10px] font-medium text-muted-foreground uppercase tracking-tight truncate leading-tight mb-0.5">
+                        {{ title }}
+                    </p>
+                    <p class="text-base font-bold leading-tight">{{ value }}</p>
+                </div>
+            </ng-container>
+
+            <!-- Standard Layout -->
+            <ng-container *ngIf="size !== 'sm'">
+                <div>
+                    <p class="text-sm font-medium mb-1" [ngClass]="{
+                'text-muted-foreground': variant === 'default',
+                'opacity-90': variant === 'primary' || variant === 'secondary'
+              }">
+                        {{ title }}
+                    </p>
+                    <p class="text-3xl font-heading font-bold">{{ value }}</p>
+                </div>
+                <div class="p-3 rounded-xl" [ngClass]="{
+              'bg-primary/10 text-primary': variant === 'default',
+              'bg-white/20 text-white': variant === 'primary' || variant === 'secondary'
+            }">
+                    <lucide-icon [img]="iconName" class="w-5 h-5"></lucide-icon>
+                </div>
+            </ng-container>
+        </div>
+
+        <!-- Trend only for default size -->
+        <div *ngIf="trend && size !== 'sm'" class="flex items-center gap-1 mt-4 text-sm" [ngClass]="trendColor">
+            <lucide-icon *ngIf="trend.value > 0" [img]="icons.TrendingUp" class="w-4 h-4"></lucide-icon>
+            <lucide-icon *ngIf="trend.value < 0" [img]="icons.TrendingDown" class="w-4 h-4"></lucide-icon>
+            <lucide-icon *ngIf="trend.value === 0" [img]="icons.Minus" class="w-4 h-4"></lucide-icon>
+
+            <span class="font-medium">{{ absTrendValue }}%</span>
+            <span class="ml-1" [ngClass]="{
+          'text-muted-foreground': variant === 'default',
+          'opacity-80': variant === 'primary' || variant === 'secondary'
+        }">
+                {{ trend.label }}
+            </span>
+        </div>
+    </div>
+</div>
