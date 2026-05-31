@@ -1,0 +1,275 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    /* OFOR Brand Colors */
+    --ofor-blue: 204 100% 35%;
+    --ofor-blue-dark: 204 100% 25%;
+    --ofor-blue-light: 204 70% 50%;
+    --ofor-green: 82 100% 36%;
+    --ofor-green-light: 82 70% 50%;
+    
+    /* Core tokens */
+    --background: 210 20% 98%;
+    --foreground: 204 50% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 204 50% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 204 50% 15%;
+
+    --primary: 204 100% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 82 100% 36%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 20% 94%;
+    --muted-foreground: 204 30% 40%;
+
+    --accent: 82 60% 92%;
+    --accent-foreground: 82 100% 25%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 204 100% 35%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar-background: 204 100% 25%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 82 100% 36%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 204 100% 30%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 204 80% 35%;
+    --sidebar-ring: 82 100% 36%;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(204, 100%, 35%) 0%, hsl(204, 100%, 25%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(82, 100%, 36%) 0%, hsl(82, 80%, 30%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(204, 100%, 30%) 0%, hsl(204, 100%, 20%) 50%, hsl(82, 80%, 30%) 100%);
+    
+    /* Shadows */
+    --shadow-card: 0 4px 6px -1px rgba(0, 102, 178, 0.1), 0 2px 4px -1px rgba(0, 102, 178, 0.06);
+    --shadow-elevated: 0 20px 25px -5px rgba(0, 102, 178, 0.1), 0 10px 10px -5px rgba(0, 102, 178, 0.04);
+  }
+
+  .dark {
+    --background: 204 50% 8%;
+    --foreground: 210 20% 95%;
+
+    --card: 204 50% 12%;
+    --card-foreground: 210 20% 95%;
+
+    --popover: 204 50% 12%;
+    --popover-foreground: 210 20% 95%;
+
+    --primary: 204 80% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 82 80% 45%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 204 40% 20%;
+    --muted-foreground: 210 15% 65%;
+
+    --accent: 82 50% 20%;
+    --accent-foreground: 82 80% 70%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 204 40% 25%;
+    --input: 204 40% 25%;
+    --ring: 204 80% 50%;
+
+    --sidebar-background: 204 60% 10%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 82 80% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 204 50% 15%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 204 40% 20%;
+    --sidebar-ring: 82 80% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Augmente la taille de base pour plus de visibilité (≈16.5px) */
+    font-size: 16.5px;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Open Sans', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+    @apply font-semibold tracking-tight;
+  }
+
+  /* Le menu latéral conserve sa taille d'origine */
+  aside.sidebar-gradient,
+  aside.sidebar-gradient * {
+    font-size: 14px;
+  }
+  aside.sidebar-gradient h1 {
+    font-size: 1.125rem;
+  }
+
+  /* Popups (dialogs) avec une typographie un peu plus grande */
+  [role="dialog"] {
+    font-size: 1rem;
+  }
+  [role="dialog"] .text-xs { font-size: 0.8125rem; }
+  [role="dialog"] .text-sm { font-size: 0.9375rem; }
+
+  /*
+   * Taille de police uniforme pour les formulaires et tableaux.
+   * S'applique partout sauf dans le menu latéral (aside.sidebar-gradient).
+   * Cible : ~15px (0.9375rem) cohérent sur inputs, selects, labels, cellules.
+   */
+  :where(form, table, .form, [role="dialog"]) input:not([type="checkbox"]):not([type="radio"]),
+  :where(form, table, .form, [role="dialog"]) textarea,
+  :where(form, table, .form, [role="dialog"]) select,
+  :where(form, table, .form, [role="dialog"]) button[role="combobox"],
+  :where(form, table, .form, [role="dialog"]) label,
+  table th,
+  table td {
+    font-size: 0.9375rem;
+    line-height: 1.4;
+  }
+
+  /* En-têtes de tableau légèrement plus compacts mais lisibles */
+  table thead th {
+    font-size: 0.8125rem;
+  }
+
+  /* Préserver les variantes explicitement marquées xs (badges, mentions) */
+  table .text-xs,
+  form .text-xs,
+  [role="dialog"] .text-xs {
+    font-size: 0.8125rem;
+  }
+
+  /* Le menu latéral n'est jamais affecté par ces règles */
+  aside.sidebar-gradient input,
+  aside.sidebar-gradient label,
+  aside.sidebar-gradient button,
+  aside.sidebar-gradient * {
+    font-size: 14px;
+  }
+}
+
+@layer components {
+  .sidebar-gradient {
+    background: var(--gradient-primary);
+  }
+  
+  .hero-gradient {
+    background: var(--gradient-hero);
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .stat-card {
+    @apply bg-card rounded-xl p-6 shadow-sm border border-border card-hover;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200;
+  }
+
+  .nav-item-active {
+    @apply bg-sidebar-accent text-sidebar-foreground border-l-4 border-secondary;
+  }
+
+  .progress-bar {
+    @apply h-2 rounded-full bg-muted overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-500 ease-out;
+  }
+
+  .badge-status {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply bg-secondary/20 text-secondary;
+  }
+
+  .badge-warning {
+    @apply bg-amber-100 text-amber-700;
+  }
+
+  .badge-danger {
+    @apply bg-destructive/20 text-destructive;
+  }
+
+  .badge-info {
+    @apply bg-primary/20 text-primary;
+  }
+
+  .table-header {
+    @apply bg-muted/50 text-muted-foreground text-sm font-semibold uppercase tracking-wider;
+  }
+}
+
+@layer utilities {
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
